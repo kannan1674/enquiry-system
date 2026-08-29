@@ -130,10 +130,17 @@ export default function SignUpPage() {
           label="Mobile"
           type="tel"
           inputMode="numeric"
+          maxLength={10}
           value={signupForm.watch('mobile')}
           error={signupForm.formState.errors.mobile?.message}
           hint={<p className="text-xs text-slate-500">Optional 10-digit number</p>}
-          {...signupForm.register('mobile')}
+          {...signupForm.register('mobile', {
+            onChange: (event) => {
+              const digits = event.target.value.replace(/\D/g, '').slice(0, 10);
+              event.target.value = digits;
+              signupForm.setValue('mobile', digits, { shouldValidate: digits.length === 10 || digits.length === 0 });
+            },
+          })}
         />
         <AuthPasswordInput
           id="password"
