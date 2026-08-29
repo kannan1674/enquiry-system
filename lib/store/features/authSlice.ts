@@ -23,6 +23,9 @@ export type AuthState = {
   otpSent: boolean;
   pendingEmail: string | null;
   pendingMobile: string | null;
+  content?: unknown;
+  sessionInfo?: { RoleId?: number } | null;
+  profileInfo?: unknown;
 };
 
 const initialState: AuthState = {

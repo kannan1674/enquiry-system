@@ -2,8 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Link2 } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { AppShell, PageHeader, Surface } from '@/components/app-shell';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';

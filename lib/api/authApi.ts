@@ -8,6 +8,7 @@ export type AuthUser = {
   role: string;
   tenantId: number | null;
   authorisedClientIds: number[];
+  RoleId?: number;
 };
 
 export type OtpResponse = {
