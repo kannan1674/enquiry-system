@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Container } from '@/components/common/container';
-import { Demo7Layout } from '../components/layouts/demo7/layout';
+import { Demo7Layout } from '../components/layouts/demo7/demo7-layout';
 import { useAppSelector } from '@/lib/store/store';
 
 export default function Home() {

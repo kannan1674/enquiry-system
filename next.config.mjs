@@ -6,15 +6,9 @@ const nextConfig = {
   
   // Performance optimizations for Windows
   experimental: {
-    // Disable turbopack for better Windows compatibility
-    turbo: false,
-    // Optimize memory usage
     memoryBasedWorkersCount: true,
   },
-  
-  // Optimize build performance
-  swcMinify: true,
-  
+
   // Reduce bundle size
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
