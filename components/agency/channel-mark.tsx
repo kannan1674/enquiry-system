@@ -5,7 +5,7 @@ import { CHANNEL_LABELS } from '@/lib/api/agencyApi';
 const ICONS: Record<string, string> = {
   facebook_page: '/media/brand-logos/facebook.svg',
   instagram: '/media/brand-logos/instagram-2.svg',
-  whatsapp: '/media/brand-logos/whatsapp.svg',
+  whatsapp: '/media/brand-logos/whatsapp.png',
 };
 
 export function ChannelMark({

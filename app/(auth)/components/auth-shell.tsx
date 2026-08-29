@@ -43,7 +43,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3 pt-2">
               <img src="/media/brand-logos/facebook.svg" alt="Facebook" className="size-8 rounded-full bg-white/90 p-1.5" />
               <img src="/media/brand-logos/instagram-2.svg" alt="Instagram" className="size-8 rounded-full bg-white/90 p-1.5" />
-              <img src="/media/brand-logos/whatsapp.svg" alt="WhatsApp" className="size-8 rounded-full bg-white/90 p-1.5" />
+              <img src="/media/brand-logos/whatsapp.png" alt="WhatsApp" className="size-8 rounded-full bg-white/90 p-1.5" />
             </div>
           </div>
           <p className="text-sm text-white/65">
