@@ -422,16 +422,21 @@ function adsQuery(params?: { startDate?: string; endDate?: string; tenantId?: nu
   return query ? `?${query}` : '';
 }
 
-export function adsReportCacheKey(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
-  return `ads-report:${adsQuery(params)}`;
+export function adsReportCacheKey(params?: { startDate?: string; endDate?: string; tenantId?: number; userId?: number }) {
+  return `ads-report:${params?.userId || 'anon'}:${adsQuery(params)}`;
 }
 
-export function getAdsReport(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
+export function getAdsReport(
+  params?: { startDate?: string; endDate?: string; tenantId?: number; userId?: number },
+  options?: { skipCache?: boolean },
+) {
   const query = adsQuery(params);
   const key = adsReportCacheKey(params);
-  const cached = getCached<AdsReport>(key, 5 * 60_000);
-  if (cached) {
-    return Promise.resolve(cached);
+  if (!options?.skipCache) {
+    const cached = getCached<AdsReport>(key, 8_000);
+    if (cached) {
+      return Promise.resolve(cached);
+    }
   }
   return apiRequest<AdsReport>(`/ads/report${query}`).then((data) => {
     setCached(key, data);

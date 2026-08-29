@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.prefetch('/dashboard');
     router.prefetch('/enquiries');
     router.prefetch('/connections');
-    void prefetchDashboardData(agency);
+    void prefetchDashboardData({ agency, tenantId: user?.tenantId, userId: user?.id });
     if (agency) {
       router.prefetch('/agency/clients');
       router.prefetch('/agency/quarantine');
@@ -102,7 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (direct) {
       router.prefetch('/workspace');
     }
-  }, [agency, direct, hydrated, isAuthenticated, router]);
+  }, [agency, direct, hydrated, isAuthenticated, router, user?.id, user?.tenantId]);
 
   useEffect(() => {
     if (!agency) {

@@ -10,6 +10,7 @@ import {
   verifyOtpUser,
 } from '@/lib/api/authActions';
 import { clearAuthData, getToken, setToken } from '@/lib/utils/tokenStorage';
+import { clearAllCached } from '@/lib/api/cache';
 
 const USER_KEY = 'authUser';
 
@@ -41,6 +42,7 @@ const initialState: AuthState = {
 };
 
 function persistSession(token: string, user: AuthUser) {
+  clearAllCached();
   setToken(token);
   if (typeof window !== 'undefined') {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -69,6 +71,7 @@ const authSlice = createSlice({
       state.pendingMobile = null;
       state.error = null;
       clearAuthData();
+      clearAllCached();
       if (typeof window !== 'undefined') {
         localStorage.removeItem(USER_KEY);
       }

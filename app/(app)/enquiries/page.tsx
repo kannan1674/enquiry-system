@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Inbox, RefreshCw } from 'lucide-react';
 import { EmptyState, PageHeader, Surface } from '@/components/app-shell';
@@ -28,6 +28,7 @@ const ENQUIRY_API = (process.env.NEXT_PUBLIC_API_URL || 'https://enquiry-api.ver
 async function enquiryApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${ENQUIRY_API}/api${path}`, {
+    cache: 'no-store',
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -40,6 +41,16 @@ async function enquiryApi<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(data.message || 'Request failed');
   }
   return data;
+}
+
+function sameEnquiryList(current: Enquiry[], next: Enquiry[]) {
+  if (current.length !== next.length) {
+    return false;
+  }
+  return current.every((item, index) => {
+    const other = next[index];
+    return item.id === other.id && item.status === other.status && item.message === other.message;
+  });
 }
 
 function statusLabel(status: string, options: EnquiryStatusOption[]) {
@@ -117,28 +128,51 @@ export default function EnquiriesPage() {
   const [canEditStatus, setCanEditStatus] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
 
-  const loadList = useCallback(async () => {
-    const data = await enquiryApi<{ enquiries: Enquiry[] }>('/enquiries');
-    setItems(data.enquiries);
+  const loadList = useCallback(async (quiet = false) => {
+    try {
+      const data = await enquiryApi<{ enquiries: Enquiry[] }>('/enquiries');
+      setItems((current) => (sameEnquiryList(current, data.enquiries) ? current : data.enquiries));
+    } catch (error) {
+      if (!quiet) {
+        throw error;
+      }
+    }
   }, []);
 
-  const pullMessages = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const result = await syncEnquiries();
-      if (result.quarantined > 0) {
-        showError(result.message);
-      } else {
-        showSuccess(result.message);
+  const pullMessages = useCallback(
+    async (silent = false) => {
+      if (syncingRef.current) {
+        return;
       }
-      await loadList();
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'Failed to pull WhatsApp messages');
-    } finally {
-      setSyncing(false);
-    }
-  }, [loadList]);
+      syncingRef.current = true;
+      if (!silent) {
+        setSyncing(true);
+      }
+      try {
+        const result = await syncEnquiries();
+        await loadList();
+        if (!silent) {
+          if (result.quarantined > 0) {
+            showError(result.message);
+          } else {
+            showSuccess(result.message);
+          }
+        }
+      } catch (error) {
+        if (!silent) {
+          showError(error instanceof Error ? error.message : 'Failed to pull WhatsApp messages');
+        }
+      } finally {
+        syncingRef.current = false;
+        if (!silent) {
+          setSyncing(false);
+        }
+      }
+    },
+    [loadList],
+  );
 
   const changeStatus = useCallback(
     (enquiry: Enquiry, status: string) => {
@@ -195,14 +229,38 @@ export default function EnquiriesPage() {
     };
   }, [hydrated, isAuthenticated]);
 
+  useEffect(() => {
+    if (!hydrated || !isAuthenticated) {
+      return;
+    }
+
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        void loadList(true);
+      }
+    };
+    const interval = window.setInterval(tick, 2000);
+    const syncInterval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void pullMessages(true);
+      }
+    }, 5000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(interval);
+      window.clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [hydrated, isAuthenticated, loadList, pullMessages]);
+
   return (
     <>
       <PageHeader
         eyebrow="Inbox"
         title="Enquiries"
-        subtitle="WhatsApp messages are pulled from the inbound API and attached to a client only when that Phone Number ID is mapped."
+        subtitle="New WhatsApp messages appear here within a second. They attach to a client only when that Phone Number ID is mapped."
         action={
-          <Button className="gap-2" onClick={() => void pullMessages()} disabled={syncing}>
+          <Button className="gap-2" onClick={() => void pullMessages(false)} disabled={syncing}>
             <RefreshCw className={syncing ? 'size-4 animate-spin' : 'size-4'} />
             {syncing ? 'Pulling...' : 'Pull WhatsApp'}
           </Button>

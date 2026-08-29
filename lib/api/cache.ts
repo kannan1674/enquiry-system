@@ -20,3 +20,7 @@ export function peekCached<T>(key: string): T | null {
   const hit = store.get(key);
   return hit ? (hit.data as T) : null;
 }
+
+export function clearAllCached() {
+  store.clear();
+}

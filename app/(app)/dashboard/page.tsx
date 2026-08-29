@@ -15,19 +15,20 @@ import {
 } from 'lucide-react';
 import { EmptyState, PageHeader, Surface } from '@/components/app-shell';
 import { PagePending } from '@/components/common/page-pending';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   adsReportCacheKey,
   getAdsReport,
+  getMetaStatus,
   listTenants,
   type AdInsight,
   type AdsReport,
   type Tenant,
 } from '@/lib/api/agencyApi';
 import { peekCached } from '@/lib/api/cache';
-import { defaultAdsRange } from '@/lib/ads/prefetch';
 import {
   adStatusTone,
   costPerEnquiry,
@@ -155,20 +156,16 @@ export default function DashboardPage() {
   const [preset, setPreset] = useState<string>('month');
   const [tenantId, setTenantId] = useState('');
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [report, setReport] = useState<AdsReport | null>(() =>
-    peekCached<AdsReport>(
-      adsReportCacheKey({
-        ...defaultAdsRange(),
-      }),
-    ),
-  );
-  const [loading, setLoading] = useState(() => !report);
+  const [facebookConnected, setFacebookConnected] = useState<boolean | null>(null);
+  const scopedTenantId = tenantId || (!agency && user?.tenantId ? String(user.tenantId) : '');
+  const [report, setReport] = useState<AdsReport | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated && !hydrated) {
       return;
     }
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       return;
     }
 
@@ -176,33 +173,45 @@ export default function DashboardPage() {
     const params = {
       startDate,
       endDate,
-      tenantId: tenantId ? Number(tenantId) : undefined,
+      tenantId: scopedTenantId ? Number(scopedTenantId) : undefined,
+      userId: user.id,
     };
     const cached = peekCached<AdsReport>(adsReportCacheKey(params));
     if (cached) {
       setReport(cached);
       setLoading(false);
-    } else if (!report) {
+    } else {
       setLoading(true);
     }
 
-    getAdsReport(params)
-      .then((data) => {
+    void (async () => {
+      try {
+        const meta = await getMetaStatus();
+        if (cancelled) {
+          return;
+        }
+        const connected = Boolean(meta.connected);
+        setFacebookConnected(connected);
+        if (!agency && !connected) {
+          setReport(null);
+          setLoading(false);
+          return;
+        }
+        const data = await getAdsReport(params);
         if (!cancelled) {
           setReport(data);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!cancelled && !cached) {
           setReport(null);
           showError(error instanceof Error ? error.message : 'Could not load ads report');
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) {
           setLoading(false);
         }
-      });
+      }
+    })();
 
     if (agency) {
       listTenants()
@@ -218,10 +227,24 @@ export default function DashboardPage() {
         });
     }
 
+    const poll = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      void getAdsReport(params, { skipCache: true })
+        .then((data) => {
+          if (!cancelled) {
+            setReport(data);
+          }
+        })
+        .catch(() => undefined);
+    }, 4000);
+
     return () => {
       cancelled = true;
+      window.clearInterval(poll);
     };
-  }, [hydrated, isAuthenticated, startDate, endDate, tenantId, agency]);
+  }, [hydrated, isAuthenticated, startDate, endDate, scopedTenantId, agency, user]);
 
   const ads = report?.ads ?? EMPTY_ADS;
   const currency = report?.currency || 'INR';
@@ -340,11 +363,22 @@ export default function DashboardPage() {
 
       {loading && !report ? (
         <PagePending />
+      ) : !agency && facebookConnected === false ? (
+        <EmptyState
+          icon={<LayoutDashboard className="size-6" />}
+          title="Connect your Facebook ads"
+          text="This workspace is empty until you connect the Facebook account you use to run ads. We then show that account’s ads and WhatsApp enquiries — not sample data."
+          action={
+            <Button asChild>
+              <Link href="/connections">Connect Facebook</Link>
+            </Button>
+          }
+        />
       ) : !report || ads.length === 0 ? (
         <EmptyState
           icon={<LayoutDashboard className="size-6" />}
           title="No ad insights yet"
-          text="When Meta ads start bringing WhatsApp enquiries, they will appear here with spend and conversation counts."
+          text="When your connected Facebook ads start bringing WhatsApp enquiries, they will appear here with spend and conversation counts."
         />
       ) : (
         <div className="space-y-6">
