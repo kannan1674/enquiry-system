@@ -16,6 +16,7 @@ import { clearAuthError } from '@/lib/store/features/authSlice';
 import { signupSchema, type SignupFormValues } from '@/lib/auth/schemas';
 import { toastFormErrors } from '@/lib/auth/toastFormErrors';
 import { showError, showSuccess } from '@/lib/utils/toast';
+import { ScreenLoader } from '@/components/common/screen-loader';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -69,6 +70,8 @@ export default function SignUpPage() {
   );
 
   return (
+    <>
+    {loading ? <ScreenLoader message="Creating your account..." /> : null}
     <AuthCard
       icon={<UserPlus className="size-5" />}
       title="Create account"
@@ -162,5 +165,6 @@ export default function SignUpPage() {
         </Link>
       </p>
     </AuthCard>
+    </>
   );
 }

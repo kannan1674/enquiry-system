@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, GitBranch, Radio, Users } from 'lucide-react';
 import { AppShell, AgencyOnly, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +51,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function ClientSetupPage() {
   return (
-    <Suspense fallback={<AppShell><p className="text-sm text-slate-500">Loading client setup...</p></AppShell>}>
+    <Suspense fallback={<AppShell><ScreenLoader message="Loading client setup..." /></AppShell>}>
       <ClientSetupContent />
     </Suspense>
   );
@@ -75,6 +76,7 @@ function ClientSetupContent() {
   const [assetId, setAssetId] = useState('');
   const [assetName, setAssetName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!tenantId) {
@@ -96,6 +98,8 @@ function ClientSetupContent() {
       setAssets(assetsRes.assets);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to load setup');
+    } finally {
+      setLoading(false);
     }
   }, [tenantId]);
 
@@ -125,6 +129,7 @@ function ClientSetupContent() {
   return (
     <AppShell>
       <AgencyOnly>
+        {loading ? <ScreenLoader message="Loading client setup..." /> : null}
         <Link href="/agency/clients" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
           <ArrowLeft className="size-4" />
           All clients

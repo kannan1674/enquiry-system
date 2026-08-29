@@ -283,3 +283,68 @@ export function syncMetaConnection(tenantId?: number) {
     companyName: string | null;
   }>('/meta/sync', { method: 'POST', body: tenantId ? { tenantId } : {} });
 }
+
+export type AdInsight = {
+  adId: string;
+  adName: string;
+  campaignId?: string;
+  campaignName?: string;
+  queryCount: number;
+  uniqueCustomers?: number;
+  amount: number;
+  amountType?: string;
+  dailyBudget?: number;
+  lifetimeBudget?: number;
+  currency: string;
+  status?: string;
+  firstQueryAt?: string;
+  lastQueryAt?: string;
+};
+
+export type AdsReport = {
+  success: boolean;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  adsRun: number;
+  totalQueries: number;
+  totalAmount: number;
+  currency: string;
+  ads: AdInsight[];
+};
+
+export type AdDetailResponse = {
+  success: boolean;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  ad: AdInsight;
+};
+
+function adsQuery(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
+  const search = new URLSearchParams();
+  if (params?.startDate) {
+    search.set('startDate', params.startDate);
+  }
+  if (params?.endDate) {
+    search.set('endDate', params.endDate);
+  }
+  if (params?.tenantId) {
+    search.set('tenantId', String(params.tenantId));
+  }
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
+export function getAdsReport(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
+  return apiRequest<AdsReport>(`/ads/report${adsQuery(params)}`, { sameOrigin: true });
+}
+
+export function getAdInsight(
+  adId: string,
+  params?: { startDate?: string; endDate?: string; tenantId?: number },
+) {
+  return apiRequest<AdDetailResponse>(`/ads/${encodeURIComponent(adId)}${adsQuery(params)}`, {
+    sameOrigin: true,
+  });
+}

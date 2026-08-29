@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AppShell, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +26,7 @@ import { showError, showSuccess } from '@/lib/utils/toast';
 
 export default function ConnectionsPage() {
   return (
-    <Suspense fallback={<AppShell><p className="text-sm text-slate-500">Loading Facebook connection...</p></AppShell>}>
+    <Suspense fallback={<AppShell><ScreenLoader message="Loading Facebook connection..." /></AppShell>}>
       <ConnectionsContent />
     </Suspense>
   );
@@ -130,7 +131,7 @@ function ConnectionsContent() {
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Checking Facebook connection...</p>
+        <ScreenLoader message="Checking Facebook connection..." />
       ) : !status?.appId ? (
         <Surface className="mx-auto max-w-lg p-6">
           <p className="text-base font-semibold text-slate-900">Turn on Continue with Facebook</p>

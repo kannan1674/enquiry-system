@@ -24,9 +24,10 @@ export async function apiRequest<T>(
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     body?: unknown;
     auth?: boolean;
+    sameOrigin?: boolean;
   } = {},
 ): Promise<T> {
-  const { method = 'GET', body, auth = true } = options;
+  const { method = 'GET', body, auth = true, sameOrigin = false } = options;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -39,7 +40,7 @@ export async function apiRequest<T>(
   }
 
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  const url = `${API_BASE}/api${normalized}`;
+  const url = sameOrigin ? `/api${normalized}` : `${API_BASE}/api${normalized}`;
   const response = await fetch(url, {
     method,
     headers,

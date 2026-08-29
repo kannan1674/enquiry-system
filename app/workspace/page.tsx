@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
 import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { FacebookBusinessLogin } from '@/components/agency/facebook-business-login';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
@@ -93,7 +94,7 @@ export default function WorkspacePage() {
       />
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading workspace...</p>
+        <ScreenLoader message="Loading workspace..." />
       ) : (
         <div className="space-y-4">
           {!metaAppId ? (

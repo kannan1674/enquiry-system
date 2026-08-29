@@ -16,6 +16,7 @@ import { clearAuthError } from '@/lib/store/features/authSlice';
 import { signinSchema, type SigninFormValues } from '@/lib/auth/schemas';
 import { toastFormErrors } from '@/lib/auth/toastFormErrors';
 import { showError, showSuccess } from '@/lib/utils/toast';
+import { ScreenLoader } from '@/components/common/screen-loader';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -53,6 +54,8 @@ export default function SignInPage() {
   );
 
   return (
+    <>
+    {loading ? <ScreenLoader message="Signing you in..." /> : null}
     <AuthCard
       icon={<KeyRound className="size-5" />}
       title="Welcome back"
@@ -93,5 +96,6 @@ export default function SignInPage() {
         </p>
       </div>
     </AuthCard>
+    </>
   );
 }

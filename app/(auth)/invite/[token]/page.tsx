@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { UserPlus } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { AuthCard } from '@/app/(auth)/components/auth-card';
 import { AuthOutlinedInput } from '@/app/(auth)/components/auth-outlined-input';
 import { AuthPasswordInput } from '@/app/(auth)/components/auth-password-input';
@@ -73,7 +74,7 @@ export default function InvitePage() {
   }, [acceptForm, params.token]);
 
   if (loading) {
-    return <p className="text-sm text-white/80">Loading invite...</p>;
+    return <ScreenLoader message="Loading invite..." />;
   }
 
   return (

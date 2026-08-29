@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { AppShell, AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +23,7 @@ export default function QuarantinePage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantByItem, setTenantByItem] = useState<Record<number, string>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     try {
@@ -30,6 +32,8 @@ export default function QuarantinePage() {
       setTenants(clientList.tenants);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to load quarantine');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -46,7 +50,9 @@ export default function QuarantinePage() {
           subtitle="Unknown Facebook Pages, Instagram accounts, lead forms, and WhatsApp numbers wait here. They are never guessed onto a client."
         />
 
-        {items.length === 0 ? (
+        {loading ? (
+          <ScreenLoader message="Loading quarantine..." />
+        ) : items.length === 0 ? (
           <EmptyState
             icon={<ShieldAlert className="size-6" />}
             title="All clear"

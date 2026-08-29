@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Building2, GitBranch, Radio, ShieldAlert, Users } from 'lucide-react';
+import { ArrowRight, Building2, GitBranch, LayoutDashboard, Radio, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppShell, PageHeader, Surface } from '@/components/app-shell';
 import { ChannelMark } from '@/components/agency/channel-mark';
@@ -74,8 +74,8 @@ export default function HomePage() {
         }
         action={
           <Button asChild className="gap-2">
-            <Link href={direct ? '/connections' : '/enquiries'}>
-              {direct ? 'Connect Facebook' : 'Open enquiries'}
+            <Link href="/dashboard">
+              Open dashboard
               <ArrowRight className="size-4" />
             </Link>
           </Button>
@@ -84,6 +84,27 @@ export default function HomePage() {
 
       {agency || direct ? (
         <div className="space-y-6">
+          <Link href="/dashboard" className="group block">
+            <Surface className="overflow-hidden p-0 transition-transform group-hover:-translate-y-0.5">
+              <div className="flex flex-wrap items-center justify-between gap-4 bg-[linear-gradient(135deg,#eef2ff_0%,#fff7ed_100%)] px-6 py-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm">
+                    <LayoutDashboard className="size-5" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-slate-900">Ad insights</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      See ads run, WhatsApp queries, spend, and cost per enquiry.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600">
+                  Open dashboard
+                  <ArrowRight className="size-4" />
+                </span>
+              </div>
+            </Surface>
+          </Link>
           <div className="grid gap-4 md:grid-cols-3">
             {steps.map((step, index) => {
               const Icon = step.icon;

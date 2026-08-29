@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Search } from 'lucide-react';
 import { AppShell, AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -82,11 +83,7 @@ export default function ClientsPage() {
         </div>
 
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[1, 2].map((item) => (
-              <div key={item} className="h-44 animate-pulse rounded-2xl bg-white/70" />
-            ))}
-          </div>
+          <ScreenLoader message="Loading clients..." />
         ) : tenants.length === 0 ? (
           <EmptyState
             title="No clients yet"

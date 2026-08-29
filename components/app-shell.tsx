@@ -3,12 +3,13 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Home, Inbox, Link2, LogOut, Radio, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Building2, Home, Inbox, LayoutDashboard, Link2, LogOut, Radio, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { logout } from '@/lib/store/features/authSlice';
 import { isAgencyAdmin, isDirectOwner, roleLabel } from '@/lib/auth/roles';
 import { listQuarantine } from '@/lib/api/agencyApi';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { cn } from '@/lib/utils';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -36,15 +37,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [agency, pathname]);
 
   if (!hydrated || !isAuthenticated || !user) {
-    return (
-      <div className="flex min-h-full items-center justify-center bg-slate-50 text-sm text-muted-foreground">
-        Loading workspace...
-      </div>
-    );
+    return <ScreenLoader message="Loading workspace..." />;
   }
 
   const links = [
     { href: '/', label: 'Overview', icon: Home },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/enquiries', label: 'Enquiries', icon: Inbox },
     { href: '/connections', label: 'Facebook', icon: Link2 },
     ...(direct ? [{ href: '/workspace', label: 'My channels', icon: Radio }] : []),
@@ -145,7 +143,11 @@ export function AgencyOnly({ children }: { children: ReactNode }) {
     }
   }, [hydrated, isAuthenticated, router, user?.role]);
 
-  if (!hydrated || !isAuthenticated || !isAgencyAdmin(user?.role)) {
+  if (!hydrated || !isAuthenticated) {
+    return <ScreenLoader message="Loading workspace..." />;
+  }
+
+  if (!isAgencyAdmin(user?.role)) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <ShieldCheck className="size-4" />

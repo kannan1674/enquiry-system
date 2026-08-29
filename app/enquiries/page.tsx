@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Inbox, RefreshCw } from 'lucide-react';
 import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export default function EnquiriesPage() {
       />
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading enquiries...</p>
+        <ScreenLoader message="Loading enquiries..." />
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Inbox className="size-6" />}
