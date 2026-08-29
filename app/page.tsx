@@ -67,11 +67,11 @@ export default function HomePage() {
       <PageHeader
         eyebrow="Workspace"
         title={`Good to see you, ${user?.name?.split(' ')[0] || 'there'}`}
-        subtitle={
-          direct
-            ? `Signed in as ${roleLabel(user?.role)}. You are using this app directly, without an agency.`
-            : `Signed in as ${roleLabel(user?.role)}. Agency users manage client companies. Direct users run their own ads.`
-        }
+        // subtitle={
+        //   direct
+        //     ? `Signed in as ${roleLabel(user?.role)}. You are using this app directly, without an agency.`
+        //     : `Signed in as ${roleLabel(user?.role)}. Agency users manage client companies. Direct users run their own ads.`
+        // }
         action={
           <Button asChild className="gap-2">
             <Link href="/dashboard">

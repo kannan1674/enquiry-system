@@ -8,32 +8,38 @@ import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CHANNEL_LABELS,
   listEnquiries,
+  listEnquiryStatuses,
   syncEnquiries,
+  updateEnquiryStatus,
   type Enquiry,
+  type EnquiryStatusOption,
 } from '@/lib/api/agencyApi';
 import { useAppSelector } from '@/lib/store/hooks';
 import { isAgencyAdmin } from '@/lib/auth/roles';
 import { showError, showSuccess } from '@/lib/utils/toast';
+import { cn } from '@/lib/utils';
+
+function statusLabel(status: string, options: EnquiryStatusOption[]) {
+  return options.find((option) => option.value === status)?.label || status;
+}
 
 export default function EnquiriesPage() {
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, hydrated, isAuthenticated } = useAppSelector((state) => state.auth);
   const agency = isAgencyAdmin(user?.role);
   const [items, setItems] = useState<Enquiry[]>([]);
+  const [statuses, setStatuses] = useState<EnquiryStatusOption[]>([]);
+  const [canEditStatus, setCanEditStatus] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [savingId, setSavingId] = useState<number | null>(null);
 
   async function load() {
-    try {
-      const data = await listEnquiries();
-      setItems(data.enquiries);
-    } catch (error) {
-      showError(error instanceof Error ? error.message : 'Failed to load enquiries');
-    } finally {
-      setLoading(false);
-    }
+    const data = await listEnquiries();
+    setItems(data.enquiries);
   }
 
   async function pullMessages() {
@@ -53,19 +59,53 @@ export default function EnquiriesPage() {
     }
   }
 
+  async function changeStatus(enquiry: Enquiry, status: string) {
+    if (status === enquiry.status || savingId === enquiry.id) {
+      return;
+    }
+    const previous = enquiry.status;
+    setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status } : item)));
+    setSavingId(enquiry.id);
+    try {
+      await updateEnquiryStatus(enquiry.id, status);
+      showSuccess(`Status updated to ${statusLabel(status, statuses)}`);
+    } catch (error) {
+      setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status: previous } : item)));
+      showError(error instanceof Error ? error.message : 'Could not change status');
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   useEffect(() => {
+    if (!hydrated || !isAuthenticated) {
+      return;
+    }
+
     void (async () => {
+      setLoading(true);
+      try {
+        const [statusData, enquiryData] = await Promise.all([listEnquiryStatuses(), listEnquiries()]);
+        setStatuses(statusData.statuses || []);
+        setCanEditStatus(Boolean(statusData.canEditStatus));
+        setItems(enquiryData.enquiries);
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Failed to load enquiries');
+      } finally {
+        setLoading(false);
+      }
+
       setSyncing(true);
       try {
         await syncEnquiries();
+        await load();
       } catch {
-        // Still show whatever is already stored.
+        // Keep the list already on screen.
       } finally {
         setSyncing(false);
       }
-      await load();
     })();
-  }, []);
+  }, [hydrated, isAuthenticated]);
 
   return (
     <AppShell>
@@ -116,7 +156,34 @@ export default function EnquiriesPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{CHANNEL_LABELS[item.channelType] || item.channelType}</Badge>
-                  <Badge variant={item.status === 'open' ? 'default' : 'outline'}>{item.status}</Badge>
+                  {canEditStatus && statuses.length > 0 ? (
+                    <Select
+                      value={item.status}
+                      onValueChange={(value) => void changeStatus(item, value)}
+                      disabled={savingId === item.id}
+                    >
+                      <SelectTrigger className="h-8 w-[150px] rounded-full">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statuses.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                        {!statuses.some((status) => status.value === item.status) ? (
+                          <SelectItem value={item.status}>{item.status}</SelectItem>
+                        ) : null}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge
+                      variant={item.status === 'open' ? 'default' : 'outline'}
+                      className={cn(item.status === 'contacted' && 'border-emerald-200 bg-emerald-50 text-emerald-700')}
+                    >
+                      {statusLabel(item.status, statuses)}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </Surface>

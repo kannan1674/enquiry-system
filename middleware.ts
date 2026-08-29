@@ -62,7 +62,9 @@ export function middleware(request: NextRequest) {
     const skipCsrf =
       isSafe ||
       p.startsWith('/api/auth') ||
-      p.startsWith('/api/backend');
+      p.startsWith('/api/backend') ||
+      p.startsWith('/api/enquiries') ||
+      p.startsWith('/api/ads');
 
     if (!skipCsrf) {
       const csrfCookie = request.cookies.get('csrf-token')?.value;

@@ -71,7 +71,9 @@ export default function DashboardPage() {
     }
 
     let cancelled = false;
-    setLoading(true);
+    if (!report) {
+      setLoading(true);
+    }
     getAdsReport({
       startDate,
       endDate,

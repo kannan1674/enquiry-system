@@ -49,7 +49,10 @@ function ConnectionsContent() {
 
   async function load() {
     try {
-      const meta = await getMetaStatus();
+      const [meta, clients] = await Promise.all([
+        getMetaStatus(),
+        agency ? listTenants() : Promise.resolve(null),
+      ]);
       setStatus(meta);
       if (meta.tenantId) {
         setTenantId(String(meta.tenantId));
@@ -58,8 +61,7 @@ function ConnectionsContent() {
       if (whatsapp) {
         setPhoneNumberId(whatsapp.externalId);
       }
-      if (agency) {
-        const clients = await listTenants();
+      if (clients) {
         setTenants(clients.tenants);
       }
     } catch (error) {

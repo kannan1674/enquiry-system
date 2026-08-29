@@ -60,8 +60,8 @@ export default function SignUpPage() {
         }),
       );
       if (signupUser.fulfilled.match(result)) {
-        showSuccess('Account created');
-        router.replace('/');
+        showSuccess('OTP sent. Verify your account to continue.');
+        router.replace(`/verify-account?email=${encodeURIComponent(email.trim().toLowerCase())}`);
       } else {
         showError((result.payload as string) || 'Signup failed');
       }

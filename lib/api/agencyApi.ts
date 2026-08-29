@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+import { clearCached, getCached, setCached } from './cache';
 
 export type Tenant = {
   id: number;
@@ -73,11 +74,21 @@ export const CHANNEL_LABELS: Record<string, string> = {
 };
 
 export function listTenants() {
-  return apiRequest<{ tenants: Tenant[] }>('/tenants');
+  const cached = getCached<{ tenants: Tenant[] }>('tenants', 60_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  return apiRequest<{ tenants: Tenant[] }>('/tenants').then((data) => {
+    setCached('tenants', data);
+    return data;
+  });
 }
 
 export function createTenant(body: { companyName: string; clientCode?: string; timezone?: string }) {
-  return apiRequest<{ tenant: Tenant; message: string }>('/tenants', { method: 'POST', body });
+  return apiRequest<{ tenant: Tenant; message: string }>('/tenants', { method: 'POST', body }).then((data) => {
+    clearCached('tenants');
+    return data;
+  });
 }
 
 export function getTenant(tenantId: number) {
@@ -179,6 +190,37 @@ export function syncEnquiries() {
     duplicates: number;
     skipped: number;
   }>('/enquiries/sync', { method: 'POST' });
+}
+
+export type EnquiryStatusOption = {
+  value: string;
+  label: string;
+};
+
+export function listEnquiryStatuses() {
+  const cached = getCached<{
+    success: boolean;
+    canEditStatus: boolean;
+    statuses: EnquiryStatusOption[];
+  }>('enquiry-statuses', 5 * 60_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  return apiRequest<{
+    success: boolean;
+    canEditStatus: boolean;
+    statuses: EnquiryStatusOption[];
+  }>('/enquiries/statuses').then((data) => {
+    setCached('enquiry-statuses', data);
+    return data;
+  });
+}
+
+export function updateEnquiryStatus(enquiryId: number, status: string) {
+  return apiRequest<{ success?: boolean; message?: string; status?: string }>(
+    `/enquiries/${enquiryId}/status`,
+    { method: 'PATCH', body: { status } },
+  );
 }
 
 export function getInvite(token: string) {
@@ -337,14 +379,12 @@ function adsQuery(params?: { startDate?: string; endDate?: string; tenantId?: nu
 }
 
 export function getAdsReport(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
-  return apiRequest<AdsReport>(`/ads/report${adsQuery(params)}`, { sameOrigin: true });
+  return apiRequest<AdsReport>(`/ads/report${adsQuery(params)}`);
 }
 
 export function getAdInsight(
   adId: string,
   params?: { startDate?: string; endDate?: string; tenantId?: number },
 ) {
-  return apiRequest<AdDetailResponse>(`/ads/${encodeURIComponent(adId)}${adsQuery(params)}`, {
-    sameOrigin: true,
-  });
+  return apiRequest<AdDetailResponse>(`/ads/${encodeURIComponent(adId)}${adsQuery(params)}`);
 }

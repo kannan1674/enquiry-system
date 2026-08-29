@@ -88,6 +88,9 @@ export default function SignInPage() {
         <Link href="/forgot-password" className="font-medium text-primary hover:underline">
           Forgot password?
         </Link>
+        <Link href="/verify-account" className="font-medium text-primary hover:underline">
+          Verify your account
+        </Link>
         <p className="text-muted-foreground">
           Not a member yet?{' '}
           <Link href="/signup" className="font-medium text-primary hover:underline">

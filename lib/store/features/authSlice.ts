@@ -112,11 +112,16 @@ const authSlice = createSlice({
       .addCase(signupUser.pending, pending)
       .addCase(signupUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAuthenticated = true;
-        state.token = action.payload.token;
-        state.user = action.payload.user;
-        state.otpSent = false;
-        persistSession(action.payload.token, action.payload.user);
+        state.isAuthenticated = false;
+        state.token = null;
+        state.user = null;
+        Object.assign(
+          state,
+          otpMeta(
+            action.payload.user?.email || action.meta.arg.email,
+            action.payload.user?.mobile || action.meta.arg.mobile,
+          ),
+        );
       })
       .addCase(signupUser.rejected, rejected)
       .addCase(signinUser.pending, pending)

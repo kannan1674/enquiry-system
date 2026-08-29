@@ -25,6 +25,13 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+export type SignupResponse = {
+  success: boolean;
+  message: string;
+  token?: string;
+  user?: AuthUser;
+};
+
 export type IdentifierPayload = {
   email?: string;
   mobile?: string;
@@ -39,7 +46,7 @@ export function signupApi(body: {
   password: string;
   confirmPassword: string;
 }) {
-  return apiPost<AuthResponse>('/api/auth/register', body);
+  return apiPost<SignupResponse>('/api/auth/register', body);
 }
 
 export function signinApi(body: IdentifierPayload & { password: string }) {

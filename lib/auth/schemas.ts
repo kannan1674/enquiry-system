@@ -30,6 +30,18 @@ export const otpSchema = z.object({
     .regex(/^\d{6}$/, 'Enter the 6-digit OTP'),
 });
 
+export const verifyAccountSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Enter a valid email address'),
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter the 6-digit OTP'),
+});
+
 export const signupSchema = z
   .object({
     accountKind: z.enum(['direct', 'agency']),
@@ -94,5 +106,6 @@ export const resetPasswordSchema = z
 export type EmailFormValues = z.infer<typeof emailSchema>;
 export type SigninFormValues = z.infer<typeof signinSchema>;
 export type OtpFormValues = z.infer<typeof otpSchema>;
+export type VerifyAccountFormValues = z.infer<typeof verifyAccountSchema>;
 export type SignupFormValues = z.infer<typeof signupSchema>;
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

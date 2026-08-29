@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     listQuarantine('pending')
       .then((data) => setPending(data.items.length))
       .catch(() => setPending(0));
-  }, [agency, pathname]);
+  }, [agency]);
 
   if (!hydrated || !isAuthenticated || !user) {
     return <ScreenLoader message="Loading workspace..." />;
