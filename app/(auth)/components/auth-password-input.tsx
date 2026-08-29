@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, InputHTMLAttributes, useState } from 'react';
+import { forwardRef, memo, InputHTMLAttributes, useState } from 'react';
 import { Check, Eye, EyeOff, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -17,7 +17,7 @@ type AuthPasswordInputProps = {
   showStrength?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'type' | 'size'>;
 
-export const AuthPasswordInput = forwardRef<HTMLInputElement, AuthPasswordInputProps>(
+export const AuthPasswordInput = memo(forwardRef<HTMLInputElement, AuthPasswordInputProps>(
   function AuthPasswordInput(
     { id, label, error, showStrength = false, value, onFocus, onBlur, className, ...inputProps },
     ref,
@@ -116,4 +116,4 @@ export const AuthPasswordInput = forwardRef<HTMLInputElement, AuthPasswordInputP
       </div>
     );
   },
-);
+));

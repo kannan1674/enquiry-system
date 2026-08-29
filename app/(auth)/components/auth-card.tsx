@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 
 type AuthCardProps = {
   icon?: ReactNode;
@@ -7,7 +7,7 @@ type AuthCardProps = {
   children: ReactNode;
 };
 
-export function AuthCard({ icon, title, subtitle, children }: AuthCardProps) {
+export const AuthCard = memo(function AuthCard({ icon, title, subtitle, children }: AuthCardProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_30px_80px_-28px_rgba(15,23,42,0.55)] sm:p-6">
       <div className="mb-5 space-y-2.5">
@@ -24,4 +24,4 @@ export function AuthCard({ icon, title, subtitle, children }: AuthCardProps) {
       {children}
     </div>
   );
-}
+});

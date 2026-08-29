@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Inbox, RefreshCw } from 'lucide-react';
 import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
@@ -27,8 +27,77 @@ function statusLabel(status: string, options: EnquiryStatusOption[]) {
   return options.find((option) => option.value === status)?.label || status;
 }
 
+const EnquiryRow = memo(function EnquiryRow({
+  item,
+  statuses,
+  canEditStatus,
+  saving,
+  onStatusChange,
+}: {
+  item: Enquiry;
+  statuses: EnquiryStatusOption[];
+  canEditStatus: boolean;
+  saving: boolean;
+  onStatusChange: (enquiry: Enquiry, status: string) => void;
+}) {
+  return (
+    <Surface className="p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <ChannelMark channelType={item.channelType} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">{item.contactName || 'Unknown contact'}</p>
+            <p className="mt-1 text-sm text-slate-600">{item.contactPhone || 'No number'}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-800">{item.message || 'No message text'}</p>
+            <p className="mt-3 text-xs text-slate-400">
+              {item.companyName || 'Unassigned client'}
+              {item.stageName ? ` · ${item.stageName}` : ''}
+              {item.assetName ? ` · ${item.assetName}` : ''}
+              {' · '}
+              {new Date(item.createdAt).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{CHANNEL_LABELS[item.channelType] || item.channelType}</Badge>
+          {canEditStatus && statuses.length > 0 ? (
+            <Select
+              value={item.status}
+              onValueChange={(value) => onStatusChange(item, value)}
+              disabled={saving}
+            >
+              <SelectTrigger className="h-8 w-[150px] rounded-full">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+                {!statuses.some((status) => status.value === item.status) ? (
+                  <SelectItem value={item.status}>{item.status}</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge
+              variant={item.status === 'open' ? 'default' : 'outline'}
+              className={cn(item.status === 'contacted' && 'border-emerald-200 bg-emerald-50 text-emerald-700')}
+            >
+              {statusLabel(item.status, statuses)}
+            </Badge>
+          )}
+        </div>
+      </div>
+    </Surface>
+  );
+});
+
 export default function EnquiriesPage() {
-  const { user, hydrated, isAuthenticated } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
+  const hydrated = useAppSelector((state) => state.auth.hydrated);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const agency = isAgencyAdmin(user?.role);
   const [items, setItems] = useState<Enquiry[]>([]);
   const [statuses, setStatuses] = useState<EnquiryStatusOption[]>([]);
@@ -37,12 +106,12 @@ export default function EnquiriesPage() {
   const [syncing, setSyncing] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     const data = await listEnquiries();
     setItems(data.enquiries);
-  }
+  }, []);
 
-  async function pullMessages() {
+  const pullMessages = useCallback(async () => {
     setSyncing(true);
     try {
       const result = await syncEnquiries();
@@ -57,25 +126,28 @@ export default function EnquiriesPage() {
     } finally {
       setSyncing(false);
     }
-  }
+  }, [load]);
 
-  async function changeStatus(enquiry: Enquiry, status: string) {
-    if (status === enquiry.status || savingId === enquiry.id) {
-      return;
-    }
-    const previous = enquiry.status;
-    setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status } : item)));
-    setSavingId(enquiry.id);
-    try {
-      await updateEnquiryStatus(enquiry.id, status);
-      showSuccess(`Status updated to ${statusLabel(status, statuses)}`);
-    } catch (error) {
-      setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status: previous } : item)));
-      showError(error instanceof Error ? error.message : 'Could not change status');
-    } finally {
-      setSavingId(null);
-    }
-  }
+  const changeStatus = useCallback(
+    async (enquiry: Enquiry, status: string) => {
+      if (status === enquiry.status) {
+        return;
+      }
+      const previous = enquiry.status;
+      setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status } : item)));
+      setSavingId(enquiry.id);
+      try {
+        await updateEnquiryStatus(enquiry.id, status);
+        showSuccess(`Status updated to ${statusLabel(status, statuses)}`);
+      } catch (error) {
+        setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status: previous } : item)));
+        showError(error instanceof Error ? error.message : 'Could not change status');
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [statuses],
+  );
 
   useEffect(() => {
     if (!hydrated || !isAuthenticated) {
@@ -93,16 +165,6 @@ export default function EnquiriesPage() {
         showError(error instanceof Error ? error.message : 'Failed to load enquiries');
       } finally {
         setLoading(false);
-      }
-
-      setSyncing(true);
-      try {
-        await syncEnquiries();
-        await load();
-      } catch {
-        // Keep the list already on screen.
-      } finally {
-        setSyncing(false);
       }
     })();
   }, [hydrated, isAuthenticated]);
@@ -137,56 +199,14 @@ export default function EnquiriesPage() {
       ) : (
         <div className="space-y-3">
           {items.map((item) => (
-            <Surface key={item.id} className="p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex min-w-0 items-start gap-3">
-                  <ChannelMark channelType={item.channelType} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">{item.contactName || 'Unknown contact'}</p>
-                    <p className="mt-1 text-sm text-slate-600">{item.contactPhone || 'No number'}</p>
-                    <p className="mt-3 text-sm leading-6 text-slate-800">{item.message || 'No message text'}</p>
-                    <p className="mt-3 text-xs text-slate-400">
-                      {item.companyName || 'Unassigned client'}
-                      {item.stageName ? ` · ${item.stageName}` : ''}
-                      {item.assetName ? ` · ${item.assetName}` : ''}
-                      {' · '}
-                      {new Date(item.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{CHANNEL_LABELS[item.channelType] || item.channelType}</Badge>
-                  {canEditStatus && statuses.length > 0 ? (
-                    <Select
-                      value={item.status}
-                      onValueChange={(value) => void changeStatus(item, value)}
-                      disabled={savingId === item.id}
-                    >
-                      <SelectTrigger className="h-8 w-[150px] rounded-full">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statuses.map((status) => (
-                          <SelectItem key={status.value} value={status.value}>
-                            {status.label}
-                          </SelectItem>
-                        ))}
-                        {!statuses.some((status) => status.value === item.status) ? (
-                          <SelectItem value={item.status}>{item.status}</SelectItem>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge
-                      variant={item.status === 'open' ? 'default' : 'outline'}
-                      className={cn(item.status === 'contacted' && 'border-emerald-200 bg-emerald-50 text-emerald-700')}
-                    >
-                      {statusLabel(item.status, statuses)}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </Surface>
+            <EnquiryRow
+              key={item.id}
+              item={item}
+              statuses={statuses}
+              canEditStatus={canEditStatus}
+              saving={savingId === item.id}
+              onStatusChange={changeStatus}
+            />
           ))}
         </div>
       )}

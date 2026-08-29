@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, GitBranch, Radio, Users } from 'lucide-react';
 import { AppShell, AgencyOnly, PageHeader, Surface } from '@/components/app-shell';
 import { ScreenLoader } from '@/components/common/screen-loader';
 import { ChannelMark } from '@/components/agency/channel-mark';
+import { ChannelAssetRow, TenantUserRow } from '@/components/agency/channel-asset-row';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,8 @@ const TABS = [
   { id: 'pipeline', label: 'Pipeline', hint: 'Set routing', icon: GitBranch },
   { id: 'channels', label: 'Channels', hint: 'Map exact IDs', icon: Radio },
 ] as const;
+
+const CHANNEL_TYPES = Object.keys(CHANNEL_LABELS);
 
 type TabId = (typeof TABS)[number]['id'];
 
@@ -118,13 +121,32 @@ function ClientSetupContent() {
     }
   }, [searchParams, load]);
 
-  const defaultStage = stages.find((stage) => stage.isDefault);
-  const pendingInvites = invites.filter((invite) => !invite.acceptedAt);
-  const done = {
-    users: users.length + pendingInvites.length > 0,
-    pipeline: stages.length > 0,
-    channels: assets.length > 0,
-  };
+  const defaultStage = useMemo(() => stages.find((stage) => stage.isDefault), [stages]);
+  const pendingInvites = useMemo(() => invites.filter((invite) => !invite.acceptedAt), [invites]);
+  const done = useMemo(
+    () => ({
+      users: users.length + pendingInvites.length > 0,
+      pipeline: stages.length > 0,
+      channels: assets.length > 0,
+    }),
+    [assets.length, pendingInvites.length, stages.length, users.length],
+  );
+
+  const saveRouting = useCallback(
+    async (channelType: string, value: string) => {
+      try {
+        await upsertRouting(tenantId, {
+          channelType,
+          pipelineStageId: Number(value),
+        });
+        showSuccess('Routing saved');
+        await load();
+      } catch (error) {
+        showError(error instanceof Error ? error.message : 'Routing failed');
+      }
+    },
+    [load, tenantId],
+  );
 
   return (
     <AppShell>
@@ -240,22 +262,21 @@ function ClientSetupContent() {
               <p className="text-base font-semibold text-slate-900">People</p>
               <div className="mt-4 space-y-3">
                 {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{user.name}</p>
-                      <p className="text-xs text-slate-500">{user.email}</p>
-                    </div>
-                    <Badge variant="secondary">{roleLabel(user.role)}</Badge>
-                  </div>
+                  <TenantUserRow
+                    key={user.id}
+                    name={user.name}
+                    detail={user.email}
+                    role={roleLabel(user.role)}
+                  />
                 ))}
                 {pendingInvites.map((invite) => (
-                  <div key={invite.id} className="flex items-center justify-between rounded-xl border border-dashed border-slate-200 px-3 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{invite.email}</p>
-                      <p className="text-xs text-amber-600">Waiting to accept</p>
-                    </div>
-                    <Badge variant="outline">{roleLabel(invite.role)}</Badge>
-                  </div>
+                  <TenantUserRow
+                    key={invite.id}
+                    name={invite.email}
+                    detail="Waiting to accept"
+                    role={roleLabel(invite.role)}
+                    pending
+                  />
                 ))}
                 {users.length === 0 && pendingInvites.length === 0 ? (
                   <p className="text-sm text-slate-500">No one has been invited yet.</p>
@@ -306,7 +327,7 @@ function ClientSetupContent() {
               <p className="text-base font-semibold text-slate-900">Channel routing</p>
               <p className="mt-1 text-sm text-slate-500">Pick where each mapped channel should land.</p>
               <div className="mt-4 space-y-3">
-                {Object.keys(CHANNEL_LABELS).map((channelType) => {
+                {CHANNEL_TYPES.map((channelType) => {
                   const rule = rules.find((item) => item.channelType === channelType && !item.assetId);
                   return (
                     <div key={channelType} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-3">
@@ -320,18 +341,7 @@ function ClientSetupContent() {
                               ? String(defaultStage.id)
                               : undefined
                         }
-                        onValueChange={async (value) => {
-                          try {
-                            await upsertRouting(tenantId, {
-                              channelType,
-                              pipelineStageId: Number(value),
-                            });
-                            showSuccess('Routing saved');
-                            await load();
-                          } catch (error) {
-                            showError(error instanceof Error ? error.message : 'Routing failed');
-                          }
-                        }}
+                        onValueChange={(value) => void saveRouting(channelType, value)}
                       >
                         <SelectTrigger className="w-36">
                           <SelectValue placeholder="Stage" />
@@ -438,14 +448,7 @@ function ClientSetupContent() {
                   </p>
                 ) : (
                   assets.map((asset) => (
-                    <div key={asset.id} className="flex items-start gap-3 rounded-xl border border-slate-200 px-3 py-3">
-                      <ChannelMark channelType={asset.channelType} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-900">{asset.displayName}</p>
-                        <p className="truncate font-mono text-xs text-slate-400">{asset.externalId}</p>
-                      </div>
-                      <Badge variant="secondary">{CHANNEL_LABELS[asset.channelType]}</Badge>
-                    </div>
+                    <ChannelAssetRow key={asset.id} asset={asset} bordered />
                   ))
                 )}
               </div>

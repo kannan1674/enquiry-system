@@ -1,5 +1,6 @@
 'use client';
 
+import '@/components/keenicons/assets/styles.css';
 import { ReactNode, useEffect, useState, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 // import { format } from 'date-fns';

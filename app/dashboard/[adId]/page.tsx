@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import { memo, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CalendarClock, IndianRupee, Megaphone, MessageCircleHeart, Users } from 'lucide-react';
@@ -34,17 +34,21 @@ function AdDetailContent() {
   const startDate = searchParams.get('startDate') || undefined;
   const endDate = searchParams.get('endDate') || undefined;
   const tenantId = searchParams.get('tenantId');
-  const { hydrated, isAuthenticated } = useAppSelector((state) => state.auth);
+  const hydrated = useAppSelector((state) => state.auth.hydrated);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [ad, setAd] = useState<AdInsight | null>(null);
   const [meta, setMeta] = useState<{ startDate?: string; endDate?: string; timezone?: string }>({});
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState('');
 
-  const backHref = `/dashboard${startDate || endDate || tenantId ? '?' : ''}${new URLSearchParams({
-    ...(startDate ? { startDate } : {}),
-    ...(endDate ? { endDate } : {}),
-    ...(tenantId ? { tenantId } : {}),
-  }).toString()}`;
+  const backHref = useMemo(() => {
+    const query = new URLSearchParams({
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(tenantId ? { tenantId } : {}),
+    }).toString();
+    return query ? `/dashboard?${query}` : '/dashboard';
+  }, [startDate, endDate, tenantId]);
 
   useEffect(() => {
     if (!hydrated || !isAuthenticated) {
@@ -158,7 +162,7 @@ function AdDetailContent() {
   );
 }
 
-function Stat({
+const Stat = memo(function Stat({
   icon,
   tone,
   label,
@@ -176,13 +180,13 @@ function Stat({
       <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
     </Surface>
   );
-}
+});
 
-function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+const Fact = memo(function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
       <dd className={cn('mt-1 text-sm font-medium text-slate-900', mono && 'break-all font-mono text-xs')}>{value}</dd>
     </div>
   );
-}
+});

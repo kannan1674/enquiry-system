@@ -24,7 +24,8 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const { loading, isAuthenticated } = useAppSelector((state) => state.auth);
+  const loading = useAppSelector((state) => state.auth.loading);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),

@@ -23,7 +23,9 @@ function VerifyAccountForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
-  const { loading, isAuthenticated, pendingEmail } = useAppSelector((state) => state.auth);
+  const loading = useAppSelector((state) => state.auth.loading);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const pendingEmail = useAppSelector((state) => state.auth.pendingEmail);
   const emailFromQuery = searchParams.get('email') || pendingEmail || '';
 
   const form = useForm<VerifyAccountFormValues>({
@@ -91,7 +93,7 @@ function VerifyAccountForm() {
         subtitle="Enter the 6-digit OTP we sent after signup. Then you can open your workspace."
       >
         <form onSubmit={handleVerify} className="space-y-5" noValidate>
-          <AuthOutlinedInput
+          {/* <AuthOutlinedInput
             id="email"
             label="Email"
             type="email"
@@ -99,7 +101,7 @@ function VerifyAccountForm() {
             value={form.watch('email')}
             error={form.formState.errors.email?.message}
             {...form.register('email')}
-          />
+          /> */}
           <AuthOtpField
             value={form.watch('otp')}
             onChange={(value) => form.setValue('otp', value, { shouldValidate: true })}

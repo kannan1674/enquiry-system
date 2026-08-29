@@ -148,15 +148,29 @@ export function createAsset(tenantId: number, body: {
 }
 
 export function listQuarantine(status = 'pending') {
-  return apiRequest<{ items: QuarantineItem[] }>(`/quarantine?status=${encodeURIComponent(status)}`);
+  const key = `quarantine:${status}`;
+  const cached = getCached<{ items: QuarantineItem[] }>(key, 20_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  return apiRequest<{ items: QuarantineItem[] }>(`/quarantine?status=${encodeURIComponent(status)}`).then((data) => {
+    setCached(key, data);
+    return data;
+  });
 }
 
 export function mapQuarantine(id: number, body: { tenantId: number; displayName?: string }) {
-  return apiRequest<{ message: string }>(`/quarantine/${id}/map`, { method: 'POST', body });
+  return apiRequest<{ message: string }>(`/quarantine/${id}/map`, { method: 'POST', body }).then((data) => {
+    clearCached('quarantine:pending');
+    return data;
+  });
 }
 
 export function dismissQuarantine(id: number) {
-  return apiRequest<{ message: string }>(`/quarantine/${id}/dismiss`, { method: 'POST' });
+  return apiRequest<{ message: string }>(`/quarantine/${id}/dismiss`, { method: 'POST' }).then((data) => {
+    clearCached('quarantine:pending');
+    return data;
+  });
 }
 
 export type Enquiry = {
@@ -177,8 +191,16 @@ export type Enquiry = {
 };
 
 export function listEnquiries(tenantId?: number) {
+  const key = `enquiries:${tenantId || 'all'}`;
+  const cached = getCached<{ enquiries: Enquiry[] }>(key, 15_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
   const query = tenantId ? `?tenantId=${tenantId}` : '';
-  return apiRequest<{ enquiries: Enquiry[] }>(`/enquiries${query}`);
+  return apiRequest<{ enquiries: Enquiry[] }>(`/enquiries${query}`).then((data) => {
+    setCached(key, data);
+    return data;
+  });
 }
 
 export function syncEnquiries() {
@@ -189,7 +211,10 @@ export function syncEnquiries() {
     quarantined: number;
     duplicates: number;
     skipped: number;
-  }>('/enquiries/sync', { method: 'POST' });
+  }>('/enquiries/sync', { method: 'POST' }).then((data) => {
+    clearCached('enquiries:all');
+    return data;
+  });
 }
 
 export type EnquiryStatusOption = {
@@ -220,7 +245,10 @@ export function updateEnquiryStatus(enquiryId: number, status: string) {
   return apiRequest<{ success?: boolean; message?: string; status?: string }>(
     `/enquiries/${enquiryId}/status`,
     { method: 'PATCH', body: { status } },
-  );
+  ).then((data) => {
+    clearCached('enquiries:all');
+    return data;
+  });
 }
 
 export function getInvite(token: string) {
@@ -276,13 +304,23 @@ export type MetaStatus = {
 };
 
 export function getMetaStatus() {
-  return apiRequest<MetaStatus>('/meta/status');
+  const cached = getCached<MetaStatus>('meta-status', 30_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  return apiRequest<MetaStatus>('/meta/status').then((data) => {
+    setCached('meta-status', data);
+    return data;
+  });
 }
 
 export function setupMetaApp(body: { appId: string; appSecret: string; configId?: string }) {
   return apiRequest<{ message: string; appId: string; configId: string | null }>('/meta/setup', {
     method: 'POST',
     body,
+  }).then((data) => {
+    clearCached('meta-status');
+    return data;
   });
 }
 
@@ -313,7 +351,10 @@ export function completeMetaLogin(body: {
     pageCount: number;
     instagramCount: number;
     companyName: string | null;
-  }>('/meta/complete', { method: 'POST', body });
+  }>('/meta/complete', { method: 'POST', body }).then((data) => {
+    clearCached('meta-status');
+    return data;
+  });
 }
 
 export function syncMetaConnection(tenantId?: number) {
@@ -323,7 +364,10 @@ export function syncMetaConnection(tenantId?: number) {
     pageCount: number;
     instagramCount: number;
     companyName: string | null;
-  }>('/meta/sync', { method: 'POST', body: tenantId ? { tenantId } : {} });
+  }>('/meta/sync', { method: 'POST', body: tenantId ? { tenantId } : {} }).then((data) => {
+    clearCached('meta-status');
+    return data;
+  });
 }
 
 export type AdInsight = {
@@ -379,7 +423,16 @@ function adsQuery(params?: { startDate?: string; endDate?: string; tenantId?: nu
 }
 
 export function getAdsReport(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
-  return apiRequest<AdsReport>(`/ads/report${adsQuery(params)}`);
+  const query = adsQuery(params);
+  const key = `ads-report:${query}`;
+  const cached = getCached<AdsReport>(key, 30_000);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+  return apiRequest<AdsReport>(`/ads/report${query}`).then((data) => {
+    setCached(key, data);
+    return data;
+  });
 }
 
 export function getAdInsight(

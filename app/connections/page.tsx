@@ -1,18 +1,16 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AppShell, PageHeader, Surface } from '@/components/app-shell';
 import { ScreenLoader } from '@/components/common/screen-loader';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
-import { ChannelMark } from '@/components/agency/channel-mark';
-import { Badge } from '@/components/ui/badge';
+import { ChannelAssetRow } from '@/components/agency/channel-asset-row';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import {
-  CHANNEL_LABELS,
   getMetaStatus,
   listTenants,
   setupMetaApp,
@@ -34,7 +32,7 @@ export default function ConnectionsPage() {
 
 function ConnectionsContent() {
   const searchParams = useSearchParams();
-  const { user } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
   const agency = isAgencyAdmin(user?.role);
   const [status, setStatus] = useState<MetaStatus | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -47,7 +45,7 @@ function ConnectionsContent() {
   const [savingApp, setSavingApp] = useState(false);
   const [phoneNumberId, setPhoneNumberId] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const [meta, clients] = await Promise.all([
         getMetaStatus(),
@@ -69,11 +67,11 @@ function ConnectionsContent() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [agency]);
 
   useEffect(() => {
     void load();
-  }, [agency]);
+  }, [load]);
 
   useEffect(() => {
     const result = searchParams.get('meta');
@@ -91,7 +89,7 @@ function ConnectionsContent() {
     } else if (result === 'error') {
       showError(searchParams.get('message') || 'Facebook login failed');
     }
-  }, [searchParams]);
+  }, [load, searchParams]);
 
   const selectedTenant = tenantId ? Number(tenantId) : user?.tenantId || undefined;
 
@@ -225,16 +223,7 @@ function ConnectionsContent() {
           ) : null}
 
           {status.assets.map((asset) => (
-            <Surface key={asset.id} className="p-4">
-              <div className="flex items-center gap-3">
-                <ChannelMark channelType={asset.channelType} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900">{asset.displayName}</p>
-                  <p className="truncate font-mono text-xs text-slate-400">{asset.externalId}</p>
-                </div>
-                <Badge variant="secondary">{CHANNEL_LABELS[asset.channelType] || asset.channelType}</Badge>
-              </div>
-            </Surface>
+            <ChannelAssetRow key={asset.id} asset={asset} />
           ))}
         </div>
       )}

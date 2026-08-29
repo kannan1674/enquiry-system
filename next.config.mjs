@@ -7,6 +7,16 @@ const nextConfig = {
   // Performance optimizations for Windows
   experimental: {
     memoryBasedWorkersCount: true,
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      'date-fns',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-tooltip',
+      '@radix-ui/react-slot',
+    ],
   },
 
   // Reduce bundle size

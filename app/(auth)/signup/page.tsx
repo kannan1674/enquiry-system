@@ -21,7 +21,8 @@ import { ScreenLoader } from '@/components/common/screen-loader';
 export default function SignUpPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading, isAuthenticated } = useAppSelector((state) => state.auth);
+  const loading = useAppSelector((state) => state.auth.loading);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const signupForm = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),

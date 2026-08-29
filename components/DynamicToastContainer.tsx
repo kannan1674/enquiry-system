@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from 'next-themes';
 
 export function DynamicToastContainer() {

@@ -36,7 +36,7 @@ export default function InvitePage() {
   const params = useParams<{ token: string }>();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState('');

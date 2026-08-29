@@ -7,8 +7,6 @@ import { ReduxProvider } from '@/providers/ReduxProvider';
 import { AuthRehydrator } from '@/components/auth-rehydrator';
 import { DynamicToastContainer } from '@/components/DynamicToastContainer';
 import '@/css/styles.css';
-import '@/components/keenicons/assets/styles.css';
-import 'react-toastify/dist/ReactToastify.css';
 import { Metadata } from 'next';
 
 const inter = Inter({ subsets: ['latin'] });

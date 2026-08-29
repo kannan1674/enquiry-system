@@ -75,7 +75,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Load settings from cookies after mount
   useEffect(() => {
-    if (!isBrowser()) return;
+    if (!isBrowser() || !document.cookie.includes(COOKIE_PREFIX)) {
+      return;
+    }
 
     const init = structuredClone(APP_SETTINGS);
     document.cookie

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -12,7 +13,6 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
 import { ScreenLoader } from '@/components/common/screen-loader';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   getAdsReport,
   listTenants,
+  type AdInsight,
   type AdsReport,
   type Tenant,
 } from '@/lib/api/agencyApi';
@@ -39,14 +40,112 @@ import { isAgencyAdmin } from '@/lib/auth/roles';
 import { showError } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
 
+const AdsChart = dynamic(() => import('@/components/dashboard/ads-chart').then((mod) => mod.AdsChart), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-xl bg-slate-100" />,
+});
+
 const PRESETS = [
   { id: 'month', label: 'This month' },
   { id: '7', label: 'Last 7 days' },
   { id: '30', label: 'Last 30 days' },
 ] as const;
 
+const EMPTY_ADS: AdInsight[] = [];
+
+const KpiCard = memo(function KpiCard({
+  icon,
+  tone,
+  label,
+  value,
+  hint,
+}: {
+  icon: ReactNode;
+  tone: string;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <Surface className="p-5">
+      <div className={cn('mb-3 flex size-9 items-center justify-center rounded-xl', tone)}>{icon}</div>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">{hint}</p>
+    </Surface>
+  );
+});
+
+const MiniStat = memo(function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 px-3 py-2">
+      <p className="text-[11px] text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
+});
+
+const AdCard = memo(function AdCard({
+  ad,
+  href,
+  currency,
+  maxQueries,
+}: {
+  ad: AdInsight;
+  href: string;
+  currency: string;
+  maxQueries: number;
+}) {
+  const width = Math.max(8, Math.round(((ad.queryCount || 0) / maxQueries) * 100));
+
+  return (
+    <Link href={href} prefetch className="group">
+      <Surface className="h-full p-5 transition-transform group-hover:-translate-y-0.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-slate-900">{ad.adName}</p>
+            <p className="mt-1 truncate text-sm text-slate-500">{ad.campaignName || 'Untitled campaign'}</p>
+          </div>
+          <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1', adStatusTone(ad.status))}>
+            {ad.status || 'UNKNOWN'}
+          </span>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <MiniStat label="Queries" value={formatCount(ad.queryCount)} />
+          <MiniStat label="People" value={formatCount(ad.uniqueCustomers || 0)} />
+          <MiniStat label="Budget" value={formatMoney(ad.amount, ad.currency || currency)} />
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs text-slate-500">
+            <span>Conversation share</span>
+            <span>{ad.queryCount} queries</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#818cf8,#fb7185)]"
+              style={{ width: `${width}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between text-sm text-indigo-600">
+          <span className="truncate font-mono text-xs text-slate-400">{ad.adId}</span>
+          <span className="inline-flex items-center gap-1 font-medium">
+            View ad
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </div>
+      </Surface>
+    </Link>
+  );
+});
+
 export default function DashboardPage() {
-  const { user, hydrated, isAuthenticated } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
+  const hydrated = useAppSelector((state) => state.auth.hydrated);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const agency = isAgencyAdmin(user?.role);
   const [startDate, setStartDate] = useState(monthStartIso());
   const [endDate, setEndDate] = useState(isoDate());
@@ -57,15 +156,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!agency) {
-      return;
-    }
-    listTenants()
-      .then((data) => setTenants(data.tenants))
-      .catch(() => setTenants([]));
-  }, [agency]);
-
-  useEffect(() => {
     if (!hydrated || !isAuthenticated) {
       return;
     }
@@ -74,14 +164,22 @@ export default function DashboardPage() {
     if (!report) {
       setLoading(true);
     }
-    getAdsReport({
+
+    const reportPromise = getAdsReport({
       startDate,
       endDate,
       tenantId: tenantId ? Number(tenantId) : undefined,
-    })
-      .then((data) => {
-        if (!cancelled) {
-          setReport(data);
+    });
+    const tenantsPromise = agency && tenants.length === 0 ? listTenants() : null;
+
+    Promise.all([reportPromise, tenantsPromise])
+      .then(([data, clientList]) => {
+        if (cancelled) {
+          return;
+        }
+        setReport(data);
+        if (clientList) {
+          setTenants(clientList.tenants);
         }
       })
       .catch((error) => {
@@ -99,9 +197,9 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [hydrated, isAuthenticated, startDate, endDate, tenantId]);
+  }, [hydrated, isAuthenticated, startDate, endDate, tenantId, agency]);
 
-  const ads = report?.ads || [];
+  const ads = report?.ads ?? EMPTY_ADS;
   const currency = report?.currency || 'INR';
   const cpe = costPerEnquiry(report?.totalAmount, report?.totalQueries);
   const chartData = useMemo(
@@ -113,9 +211,9 @@ export default function DashboardPage() {
       })),
     [ads],
   );
-  const maxQueries = Math.max(...ads.map((ad) => ad.queryCount || 0), 1);
+  const maxQueries = useMemo(() => Math.max(...ads.map((ad) => ad.queryCount || 0), 1), [ads]);
 
-  function applyPreset(id: string) {
+  const applyPreset = useCallback((id: string) => {
     setPreset(id);
     setEndDate(isoDate());
     if (id === 'month') {
@@ -125,7 +223,7 @@ export default function DashboardPage() {
     } else if (id === '30') {
       setStartDate(daysAgoIso(29));
     }
-  }
+  }, []);
 
   const rangeLabel = report
     ? `${formatPrettyDate(report.startDate)} – ${formatPrettyDate(report.endDate)}`
@@ -267,21 +365,7 @@ export default function DashboardPage() {
                 <CalendarRange className="size-4 text-slate-400" />
               </div>
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} barGap={6}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(99,102,241,0.06)' }}
-                      formatter={(value, name) =>
-                        name === 'spend' ? formatMoney(Number(value), currency) : formatCount(Number(value))
-                      }
-                    />
-                    <Bar dataKey="queries" name="queries" fill="#818cf8" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="spend" name="spend" fill="#fb923c" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <AdsChart data={chartData} currency={currency} />
               </div>
             </Surface>
 
@@ -317,97 +401,21 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              {ads.map((ad) => {
-                const width = Math.max(8, Math.round(((ad.queryCount || 0) / maxQueries) * 100));
-                const href = `/dashboard/${encodeURIComponent(ad.adId)}?startDate=${startDate}&endDate=${endDate}${
-                  tenantId ? `&tenantId=${tenantId}` : ''
-                }`;
-                return (
-                  <Link key={ad.adId} href={href} className="group">
-                    <Surface className="h-full p-5 transition-transform group-hover:-translate-y-0.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-semibold text-slate-900">{ad.adName}</p>
-                          <p className="mt-1 truncate text-sm text-slate-500">
-                            {ad.campaignName || 'Untitled campaign'}
-                          </p>
-                        </div>
-                        <span
-                          className={cn(
-                            'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1',
-                            adStatusTone(ad.status),
-                          )}
-                        >
-                          {ad.status || 'UNKNOWN'}
-                        </span>
-                      </div>
-
-                      <div className="mt-5 grid grid-cols-3 gap-3">
-                        <MiniStat label="Queries" value={formatCount(ad.queryCount)} />
-                        <MiniStat label="People" value={formatCount(ad.uniqueCustomers || 0)} />
-                        <MiniStat label="Budget" value={formatMoney(ad.amount, ad.currency || currency)} />
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="mb-1.5 flex items-center justify-between text-xs text-slate-500">
-                          <span>Conversation share</span>
-                          <span>{ad.queryCount} queries</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className="h-full rounded-full bg-[linear-gradient(90deg,#818cf8,#fb7185)]"
-                            style={{ width: `${width}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between text-sm text-indigo-600">
-                        <span className="truncate font-mono text-xs text-slate-400">{ad.adId}</span>
-                        <span className="inline-flex items-center gap-1 font-medium">
-                          View ad
-                          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-                        </span>
-                      </div>
-                    </Surface>
-                  </Link>
-                );
-              })}
+              {ads.map((ad) => (
+                <AdCard
+                  key={ad.adId}
+                  ad={ad}
+                  currency={currency}
+                  maxQueries={maxQueries}
+                  href={`/dashboard/${encodeURIComponent(ad.adId)}?startDate=${startDate}&endDate=${endDate}${
+                    tenantId ? `&tenantId=${tenantId}` : ''
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
       )}
     </AppShell>
-  );
-}
-
-function KpiCard({
-  icon,
-  tone,
-  label,
-  value,
-  hint,
-}: {
-  icon: ReactNode;
-  tone: string;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <Surface className="p-5">
-      <div className={cn('mb-3 flex size-9 items-center justify-center rounded-xl', tone)}>{icon}</div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{hint}</p>
-    </Surface>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 px-3 py-2">
-      <p className="text-[11px] text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-slate-900">{value}</p>
-    </div>
   );
 }

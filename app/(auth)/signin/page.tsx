@@ -21,7 +21,8 @@ import { ScreenLoader } from '@/components/common/screen-loader';
 export default function SignInPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading, isAuthenticated } = useAppSelector((state) => state.auth);
+  const loading = useAppSelector((state) => state.auth.loading);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   const form = useForm<SigninFormValues>({
     resolver: zodResolver(signinSchema),
@@ -84,13 +85,13 @@ export default function SignInPage() {
         </Button>
       </form>
 
-      <div className="mt-6 flex flex-col gap-2 text-sm">
-        <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+      <div className="mt-6 flex flex-col gap-2 text-sm justify-end">
+        <Link href="/forgot-password" className="font-medium text-primary hover:underline text-end">
           Forgot password?
         </Link>
-        <Link href="/verify-account" className="font-medium text-primary hover:underline">
+        {/* <Link href="/verify-account" className="font-medium text-primary hover:underline">
           Verify your account
-        </Link>
+        </Link> */}
         <p className="text-muted-foreground">
           Not a member yet?{' '}
           <Link href="/signup" className="font-medium text-primary hover:underline">

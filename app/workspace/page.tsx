@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { AppShell, EmptyState, PageHeader } from '@/components/app-shell';
 import { ScreenLoader } from '@/components/common/screen-loader';
 import { FacebookBusinessLogin } from '@/components/agency/facebook-business-login';
-import { ChannelMark } from '@/components/agency/channel-mark';
-import { Badge } from '@/components/ui/badge';
+import { ChannelAssetRow } from '@/components/agency/channel-asset-row';
 import { Button } from '@/components/ui/button';
 import {
-  CHANNEL_LABELS,
   getMetaStatus,
   getTenant,
   listAssets,
@@ -22,7 +20,7 @@ import { isDirectOwner } from '@/lib/auth/roles';
 import { showError } from '@/lib/utils/toast';
 
 export default function WorkspacePage() {
-  const { user } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [assets, setAssets] = useState<ChannelAsset[]>([]);
   const [metaReady, setMetaReady] = useState(false);
@@ -30,6 +28,15 @@ export default function WorkspacePage() {
   const [metaConfigId, setMetaConfigId] = useState<string | null>(null);
   const [graphVersion, setGraphVersion] = useState('v21.0');
   const [loading, setLoading] = useState(true);
+
+  const reloadAssets = useCallback(() => {
+    if (!user?.tenantId) {
+      return;
+    }
+    listAssets(user.tenantId)
+      .then((data) => setAssets(data.assets))
+      .catch((error) => showError(error instanceof Error ? error.message : 'Failed to reload'));
+  }, [user?.tenantId]);
 
   useEffect(() => {
     if (!user?.tenantId) {
@@ -80,14 +87,7 @@ export default function WorkspacePage() {
               appId={metaAppId}
               configId={metaConfigId}
               graphVersion={graphVersion}
-              onConnected={() => {
-                if (!user.tenantId) {
-                  return;
-                }
-                listAssets(user.tenantId)
-                  .then((data) => setAssets(data.assets))
-                  .catch((error) => showError(error instanceof Error ? error.message : 'Failed to reload'));
-              }}
+              onConnected={reloadAssets}
             />
           ) : null
         }
@@ -110,16 +110,7 @@ export default function WorkspacePage() {
             />
           ) : null}
           {assets.map((asset) => (
-            <Surface key={asset.id} className="p-4">
-              <div className="flex items-center gap-3">
-                <ChannelMark channelType={asset.channelType} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900">{asset.displayName}</p>
-                  <p className="truncate font-mono text-xs text-slate-400">{asset.externalId}</p>
-                </div>
-                <Badge variant="secondary">{CHANNEL_LABELS[asset.channelType] || asset.channelType}</Badge>
-              </div>
-            </Surface>
+            <ChannelAssetRow key={asset.id} asset={asset} />
           ))}
         </div>
       )}

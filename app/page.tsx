@@ -1,12 +1,14 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Building2, GitBranch, LayoutDashboard, Radio, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppShell, PageHeader, Surface } from '@/components/app-shell';
 import { ChannelMark } from '@/components/agency/channel-mark';
+import { HomeStepCard } from '@/components/agency/channel-asset-row';
 import { useAppSelector } from '@/lib/store/hooks';
-import { isAgencyAdmin, isDirectOwner, roleLabel } from '@/lib/auth/roles';
+import { isAgencyAdmin, isDirectOwner } from '@/lib/auth/roles';
 
 const AGENCY_STEPS = [
   {
@@ -57,16 +59,17 @@ const DIRECT_STEPS = [
 ];
 
 export default function HomePage() {
-  const { user } = useAppSelector((state) => state.auth);
+  const user = useAppSelector((state) => state.auth.user);
   const agency = isAgencyAdmin(user?.role);
   const direct = isDirectOwner(user?.role);
+  const firstName = useMemo(() => user?.name?.split(' ')[0] || 'there', [user?.name]);
   const steps = agency ? AGENCY_STEPS : DIRECT_STEPS;
 
   return (
     <AppShell>
       <PageHeader
         eyebrow="Workspace"
-        title={`Good to see you, ${user?.name?.split(' ')[0] || 'there'}`}
+        title={`Good to see you, ${firstName}`}
         // subtitle={
         //   direct
         //     ? `Signed in as ${roleLabel(user?.role)}. You are using this app directly, without an agency.`
@@ -106,23 +109,16 @@ export default function HomePage() {
             </Surface>
           </Link>
           <div className="grid gap-4 md:grid-cols-3">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <Link key={step.title} href={step.href} className="group">
-                  <Surface className="h-full p-5 transition-transform group-hover:-translate-y-0.5">
-                    <div className="mb-4 flex items-center justify-between">
-                      <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                        <Icon className="size-4" />
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400">0{index + 1}</span>
-                    </div>
-                    <p className="font-semibold text-slate-900">{step.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">{step.text}</p>
-                  </Surface>
-                </Link>
-              );
-            })}
+            {steps.map((step, index) => (
+              <HomeStepCard
+                key={step.title}
+                href={step.href}
+                title={step.title}
+                text={step.text}
+                index={index}
+                icon={step.icon}
+              />
+            ))}
           </div>
 
           {agency ? (

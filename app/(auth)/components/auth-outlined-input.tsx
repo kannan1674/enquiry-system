@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, InputHTMLAttributes, ReactNode, useState } from 'react';
+import { forwardRef, memo, InputHTMLAttributes, ReactNode, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 type AuthOutlinedInputProps = {
@@ -10,7 +10,7 @@ type AuthOutlinedInputProps = {
   hint?: ReactNode;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'size'>;
 
-export const AuthOutlinedInput = forwardRef<HTMLInputElement, AuthOutlinedInputProps>(
+export const AuthOutlinedInput = memo(forwardRef<HTMLInputElement, AuthOutlinedInputProps>(
   function AuthOutlinedInput(
     { id, label, error, hint, value, onFocus, onBlur, className, ...inputProps },
     ref,
@@ -71,4 +71,4 @@ export const AuthOutlinedInput = forwardRef<HTMLInputElement, AuthOutlinedInputP
       </div>
     );
   },
-);
+));

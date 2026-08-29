@@ -1,3 +1,6 @@
+'use client';
+
+import { memo } from 'react';
 import { ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CHANNEL_LABELS } from '@/lib/api/agencyApi';
@@ -8,7 +11,7 @@ const ICONS: Record<string, string> = {
   whatsapp: '/media/brand-logos/whatsapp.png',
 };
 
-export function ChannelMark({
+export const ChannelMark = memo(function ChannelMark({
   channelType,
   size = 'md',
 }: {
@@ -32,13 +35,13 @@ export function ChannelMark({
       )}
     </span>
   );
-}
+});
 
-export function ChannelLabel({ channelType }: { channelType: string }) {
+export const ChannelLabel = memo(function ChannelLabel({ channelType }: { channelType: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       <ChannelMark channelType={channelType} size="sm" />
       <span>{CHANNEL_LABELS[channelType] || channelType}</span>
     </span>
   );
-}
+});

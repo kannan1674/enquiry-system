@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,7 @@ type AuthOtpFieldProps = {
   hint?: string;
 };
 
-export function AuthOtpField({ value, onChange, error, hint }: AuthOtpFieldProps) {
+export const AuthOtpField = memo(function AuthOtpField({ value, onChange, error, hint }: AuthOtpFieldProps) {
   return (
     <div className="space-y-2">
       <Label className="text-[0.8rem] font-medium">OTP</Label>
@@ -36,4 +37,4 @@ export function AuthOtpField({ value, onChange, error, hint }: AuthOtpFieldProps
       ) : null}
     </div>
   );
-}
+});

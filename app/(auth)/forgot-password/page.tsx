@@ -20,7 +20,7 @@ import { ScreenLoader } from '@/components/common/screen-loader';
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector((state) => state.auth);
+  const loading = useAppSelector((state) => state.auth.loading);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
