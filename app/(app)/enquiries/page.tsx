@@ -3,25 +3,44 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Inbox, RefreshCw } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CHANNEL_LABELS,
-  listEnquiries,
-  listEnquiryStatuses,
   syncEnquiries,
-  updateEnquiryStatus,
   type Enquiry,
   type EnquiryStatusOption,
 } from '@/lib/api/agencyApi';
 import { useAppSelector } from '@/lib/store/hooks';
 import { isAgencyAdmin } from '@/lib/auth/roles';
+import { getToken } from '@/lib/utils/tokenStorage';
 import { showError, showSuccess } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
+
+const ENQUIRY_API = (process.env.NEXT_PUBLIC_API_URL || 'https://enquiry-api.vercel.app')
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/$/, '');
+
+async function enquiryApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const response = await fetch(`${ENQUIRY_API}/api${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  });
+  const data = (await response.json()) as { success?: boolean; message?: string } & T;
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || 'Request failed');
+  }
+  return data;
+}
 
 function statusLabel(status: string, options: EnquiryStatusOption[]) {
   return options.find((option) => option.value === status)?.label || status;
@@ -31,13 +50,11 @@ const EnquiryRow = memo(function EnquiryRow({
   item,
   statuses,
   canEditStatus,
-  saving,
   onStatusChange,
 }: {
   item: Enquiry;
   statuses: EnquiryStatusOption[];
   canEditStatus: boolean;
-  saving: boolean;
   onStatusChange: (enquiry: Enquiry, status: string) => void;
 }) {
   return (
@@ -61,11 +78,7 @@ const EnquiryRow = memo(function EnquiryRow({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{CHANNEL_LABELS[item.channelType] || item.channelType}</Badge>
           {canEditStatus && statuses.length > 0 ? (
-            <Select
-              value={item.status}
-              onValueChange={(value) => onStatusChange(item, value)}
-              disabled={saving}
-            >
+            <Select value={item.status} onValueChange={(value) => onStatusChange(item, value)}>
               <SelectTrigger className="h-8 w-[150px] rounded-full">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -104,10 +117,9 @@ export default function EnquiriesPage() {
   const [canEditStatus, setCanEditStatus] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [savingId, setSavingId] = useState<number | null>(null);
 
-  const load = useCallback(async () => {
-    const data = await listEnquiries();
+  const loadList = useCallback(async () => {
+    const data = await enquiryApi<{ enquiries: Enquiry[] }>('/enquiries');
     setItems(data.enquiries);
   }, []);
 
@@ -120,31 +132,30 @@ export default function EnquiriesPage() {
       } else {
         showSuccess(result.message);
       }
-      await load();
+      await loadList();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Failed to pull WhatsApp messages');
     } finally {
       setSyncing(false);
     }
-  }, [load]);
+  }, [loadList]);
 
   const changeStatus = useCallback(
-    async (enquiry: Enquiry, status: string) => {
+    (enquiry: Enquiry, status: string) => {
       if (status === enquiry.status) {
         return;
       }
       const previous = enquiry.status;
       setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status } : item)));
-      setSavingId(enquiry.id);
-      try {
-        await updateEnquiryStatus(enquiry.id, status);
-        showSuccess(`Status updated to ${statusLabel(status, statuses)}`);
-      } catch (error) {
+      showSuccess(`Status updated to ${statusLabel(status, statuses)}`);
+
+      void enquiryApi(`/enquiries/${enquiry.id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }).catch((error) => {
         setItems((current) => current.map((item) => (item.id === enquiry.id ? { ...item, status: previous } : item)));
         showError(error instanceof Error ? error.message : 'Could not change status');
-      } finally {
-        setSavingId(null);
-      }
+      });
     },
     [statuses],
   );
@@ -154,23 +165,38 @@ export default function EnquiriesPage() {
       return;
     }
 
+    let cancelled = false;
     void (async () => {
       setLoading(true);
       try {
-        const [statusData, enquiryData] = await Promise.all([listEnquiryStatuses(), listEnquiries()]);
+        const [enquiryData, statusData] = await Promise.all([
+          enquiryApi<{ enquiries: Enquiry[] }>('/enquiries'),
+          enquiryApi<{ statuses: EnquiryStatusOption[]; canEditStatus?: boolean }>('/enquiries/statuses'),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setItems(enquiryData.enquiries);
         setStatuses(statusData.statuses || []);
         setCanEditStatus(Boolean(statusData.canEditStatus));
-        setItems(enquiryData.enquiries);
       } catch (error) {
-        showError(error instanceof Error ? error.message : 'Failed to load enquiries');
+        if (!cancelled) {
+          showError(error instanceof Error ? error.message : 'Failed to load enquiries');
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [hydrated, isAuthenticated]);
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         eyebrow="Inbox"
         title="Enquiries"
@@ -183,8 +209,8 @@ export default function EnquiriesPage() {
         }
       />
 
-      {loading ? (
-        <ScreenLoader message="Loading enquiries..." />
+      {loading && items.length === 0 ? (
+        <PagePending />
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Inbox className="size-6" />}
@@ -204,12 +230,11 @@ export default function EnquiriesPage() {
               item={item}
               statuses={statuses}
               canEditStatus={canEditStatus}
-              saving={savingId === item.id}
               onStatusChange={changeStatus}
             />
           ))}
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

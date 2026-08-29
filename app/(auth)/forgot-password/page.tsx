@@ -15,7 +15,6 @@ import { clearAuthError } from '@/lib/store/features/authSlice';
 import { emailSchema, type EmailFormValues } from '@/lib/auth/schemas';
 import { toastFormErrors } from '@/lib/auth/toastFormErrors';
 import { showError, showSuccess } from '@/lib/utils/toast';
-import { ScreenLoader } from '@/components/common/screen-loader';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -46,8 +45,6 @@ export default function ForgotPasswordPage() {
   );
 
   return (
-    <>
-    {loading ? <ScreenLoader message="Sending reset OTP..." /> : null}
     <AuthCard
       icon={<LifeBuoy className="size-5" />}
       title="Forgot password"
@@ -75,6 +72,5 @@ export default function ForgotPasswordPage() {
         </Link>
       </p>
     </AuthCard>
-    </>
   );
 }

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Building2, GitBranch, LayoutDashboard, Radio, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AppShell, PageHeader, Surface } from '@/components/app-shell';
+import { PageHeader, Surface } from '@/components/app-shell';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { HomeStepCard } from '@/components/agency/channel-asset-row';
 import { useAppSelector } from '@/lib/store/hooks';
@@ -66,7 +66,7 @@ export default function HomePage() {
   const steps = agency ? AGENCY_STEPS : DIRECT_STEPS;
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         eyebrow="Workspace"
         title={`Good to see you, ${firstName}`}
@@ -162,6 +162,6 @@ export default function HomePage() {
           </Button>
         </Surface>
       )}
-    </AppShell>
+    </>
   );
 }

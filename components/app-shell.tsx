@@ -20,6 +20,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { logout } from '@/lib/store/features/authSlice';
 import { isAgencyAdmin, isDirectOwner, roleLabel } from '@/lib/auth/roles';
 import { listQuarantine } from '@/lib/api/agencyApi';
+import { prefetchDashboardData } from '@/lib/ads/prefetch';
 import { ScreenLoader } from '@/components/common/screen-loader';
 import { cn } from '@/lib/utils';
 
@@ -93,6 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.prefetch('/dashboard');
     router.prefetch('/enquiries');
     router.prefetch('/connections');
+    void prefetchDashboardData(agency);
     if (agency) {
       router.prefetch('/agency/clients');
       router.prefetch('/agency/quarantine');
@@ -130,7 +132,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     [agency, direct, pending],
   );
 
-  if (!hydrated || !isAuthenticated || !user) {
+  if ((!hydrated && !isAuthenticated) || !user) {
     return <ScreenLoader message="Loading workspace..." />;
   }
 

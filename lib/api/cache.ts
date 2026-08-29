@@ -15,3 +15,8 @@ export function setCached<T>(key: string, data: T) {
 export function clearCached(key: string) {
   store.delete(key);
 }
+
+export function peekCached<T>(key: string): T | null {
+  const hit = store.get(key);
+  return hit ? (hit.data as T) : null;
+}

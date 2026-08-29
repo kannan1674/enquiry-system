@@ -12,13 +12,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const isDark = resolvedTheme === 'dark';
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden">
+    <div className="relative h-dvh w-full overflow-hidden bg-slate-950">
       <Image
         src="/media/auth/bg1.png"
         alt=""
         fill
-        priority
         sizes="100vw"
+        quality={50}
         className="object-cover"
       />
       <div className="absolute inset-0 bg-slate-950/55" />

@@ -422,10 +422,14 @@ function adsQuery(params?: { startDate?: string; endDate?: string; tenantId?: nu
   return query ? `?${query}` : '';
 }
 
+export function adsReportCacheKey(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
+  return `ads-report:${adsQuery(params)}`;
+}
+
 export function getAdsReport(params?: { startDate?: string; endDate?: string; tenantId?: number }) {
   const query = adsQuery(params);
-  const key = `ads-report:${query}`;
-  const cached = getCached<AdsReport>(key, 30_000);
+  const key = adsReportCacheKey(params);
+  const cached = getCached<AdsReport>(key, 5 * 60_000);
   if (cached) {
     return Promise.resolve(cached);
   }

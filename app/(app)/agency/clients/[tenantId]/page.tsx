@@ -4,8 +4,8 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, GitBranch, Radio, Users } from 'lucide-react';
-import { AppShell, AgencyOnly, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { AgencyOnly, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { ChannelAssetRow, TenantUserRow } from '@/components/agency/channel-asset-row';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
@@ -54,7 +54,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function ClientSetupPage() {
   return (
-    <Suspense fallback={<AppShell><ScreenLoader message="Loading client setup..." /></AppShell>}>
+    <Suspense fallback={<PagePending />}>
       <ClientSetupContent />
     </Suspense>
   );
@@ -149,9 +149,9 @@ function ClientSetupContent() {
   );
 
   return (
-    <AppShell>
+    <>
       <AgencyOnly>
-        {loading ? <ScreenLoader message="Loading client setup..." /> : null}
+        {loading && !tenant ? <PagePending /> : null}
         <Link href="/agency/clients" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
           <ArrowLeft className="size-4" />
           All clients
@@ -470,6 +470,6 @@ function ClientSetupContent() {
           )}
         </div>
       </AgencyOnly>
-    </AppShell>
+    </>
   );
 }

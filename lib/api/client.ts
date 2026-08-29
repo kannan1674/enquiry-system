@@ -1,9 +1,12 @@
 import { getToken } from '@/lib/utils/tokenStorage';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://enquiry-api.vercel.app')
+  .replace(/^['"]|['"]$/g, '')
+  .replace(/\/$/, '');
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  const response = await fetch(`${API_BASE}${normalized}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

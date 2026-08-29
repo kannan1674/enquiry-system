@@ -4,8 +4,8 @@ import { memo, Suspense, useEffect, useMemo, useState, type ReactNode } from 're
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CalendarClock, IndianRupee, Megaphone, MessageCircleHeart, Users } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { Button } from '@/components/ui/button';
 import { getAdInsight, type AdInsight } from '@/lib/api/agencyApi';
 import {
@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 
 export default function AdDetailPage() {
   return (
-    <Suspense fallback={<AppShell><ScreenLoader message="Loading ad..." /></AppShell>}>
+    <Suspense fallback={<PagePending />}>
       <AdDetailContent />
     </Suspense>
   );
@@ -92,7 +92,7 @@ function AdDetailContent() {
   const cpe = costPerEnquiry(ad?.amount, ad?.queryCount);
 
   return (
-    <AppShell>
+    <>
       <Button variant="outline" size="sm" className="mb-5 gap-2" asChild>
         <Link href={backHref || '/dashboard'}>
           <ArrowLeft className="size-3.5" />
@@ -101,7 +101,7 @@ function AdDetailContent() {
       </Button>
 
       {loading ? (
-        <ScreenLoader message="Fetching this ad..." />
+        <PagePending />
       ) : !ad ? (
         <EmptyState
           icon={<Megaphone className="size-6" />}
@@ -158,7 +158,7 @@ function AdDetailContent() {
           </div>
         </>
       )}
-    </AppShell>
+    </>
   );
 }
 

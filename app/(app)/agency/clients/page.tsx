@@ -4,8 +4,8 @@ import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } fro
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Search } from 'lucide-react';
-import { AppShell, AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -97,7 +97,7 @@ export default function ClientsPage() {
   }, [deferredQuery, tenants]);
 
   return (
-    <AppShell>
+    <>
       <AgencyOnly>
         <PageHeader
           eyebrow="Setup"
@@ -122,7 +122,7 @@ export default function ClientsPage() {
         </div>
 
         {loading ? (
-          <ScreenLoader message="Loading clients..." />
+          <PagePending />
         ) : tenants.length === 0 ? (
           <EmptyState
             title="No clients yet"
@@ -188,6 +188,6 @@ export default function ClientsPage() {
           </DialogContent>
         </Dialog>
       </AgencyOnly>
-    </AppShell>
+    </>
   );
 }

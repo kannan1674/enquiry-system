@@ -2,8 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AppShell, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { ConnectFacebookButton } from '@/components/agency/connect-facebook-button';
 import { ChannelAssetRow } from '@/components/agency/channel-asset-row';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import { showError, showSuccess } from '@/lib/utils/toast';
 
 export default function ConnectionsPage() {
   return (
-    <Suspense fallback={<AppShell><ScreenLoader message="Loading Facebook connection..." /></AppShell>}>
+    <Suspense fallback={<PagePending />}>
       <ConnectionsContent />
     </Suspense>
   );
@@ -94,7 +94,7 @@ function ConnectionsContent() {
   const selectedTenant = tenantId ? Number(tenantId) : user?.tenantId || undefined;
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         eyebrow="Facebook Login for Business"
         title="Connect your ads account"
@@ -131,7 +131,7 @@ function ConnectionsContent() {
       ) : null}
 
       {loading ? (
-        <ScreenLoader message="Checking Facebook connection..." />
+        <PagePending />
       ) : !status?.appId ? (
         <Surface className="mx-auto max-w-lg p-6">
           <p className="text-base font-semibold text-slate-900">Turn on Continue with Facebook</p>
@@ -227,6 +227,6 @@ function ConnectionsContent() {
           ))}
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

@@ -2,8 +2,8 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
-import { AppShell, AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { AgencyOnly, EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { ChannelMark } from '@/components/agency/channel-mark';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -140,7 +140,7 @@ export default function QuarantinePage() {
   );
 
   return (
-    <AppShell>
+    <>
       <AgencyOnly>
         <PageHeader
           eyebrow="Safety net"
@@ -149,7 +149,7 @@ export default function QuarantinePage() {
         />
 
         {loading ? (
-          <ScreenLoader message="Loading quarantine..." />
+          <PagePending />
         ) : items.length === 0 ? (
           <EmptyState
             icon={<ShieldAlert className="size-6" />}
@@ -173,6 +173,6 @@ export default function QuarantinePage() {
           </div>
         )}
       </AgencyOnly>
-    </AppShell>
+    </>
   );
 }

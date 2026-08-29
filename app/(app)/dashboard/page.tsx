@@ -13,18 +13,21 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader, Surface } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { EmptyState, PageHeader, Surface } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  adsReportCacheKey,
   getAdsReport,
   listTenants,
   type AdInsight,
   type AdsReport,
   type Tenant,
 } from '@/lib/api/agencyApi';
+import { peekCached } from '@/lib/api/cache';
+import { defaultAdsRange } from '@/lib/ads/prefetch';
 import {
   adStatusTone,
   costPerEnquiry,
@@ -147,43 +150,50 @@ export default function DashboardPage() {
   const hydrated = useAppSelector((state) => state.auth.hydrated);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const agency = isAgencyAdmin(user?.role);
-  const [startDate, setStartDate] = useState(monthStartIso());
-  const [endDate, setEndDate] = useState(isoDate());
+  const [startDate, setStartDate] = useState(monthStartIso);
+  const [endDate, setEndDate] = useState(isoDate);
   const [preset, setPreset] = useState<string>('month');
   const [tenantId, setTenantId] = useState('');
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [report, setReport] = useState<AdsReport | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [report, setReport] = useState<AdsReport | null>(() =>
+    peekCached<AdsReport>(
+      adsReportCacheKey({
+        ...defaultAdsRange(),
+      }),
+    ),
+  );
+  const [loading, setLoading] = useState(() => !report);
 
   useEffect(() => {
-    if (!hydrated || !isAuthenticated) {
+    if (!isAuthenticated && !hydrated) {
+      return;
+    }
+    if (!isAuthenticated) {
       return;
     }
 
     let cancelled = false;
-    if (!report) {
-      setLoading(true);
-    }
-
-    const reportPromise = getAdsReport({
+    const params = {
       startDate,
       endDate,
       tenantId: tenantId ? Number(tenantId) : undefined,
-    });
-    const tenantsPromise = agency && tenants.length === 0 ? listTenants() : null;
+    };
+    const cached = peekCached<AdsReport>(adsReportCacheKey(params));
+    if (cached) {
+      setReport(cached);
+      setLoading(false);
+    } else if (!report) {
+      setLoading(true);
+    }
 
-    Promise.all([reportPromise, tenantsPromise])
-      .then(([data, clientList]) => {
-        if (cancelled) {
-          return;
-        }
-        setReport(data);
-        if (clientList) {
-          setTenants(clientList.tenants);
+    getAdsReport(params)
+      .then((data) => {
+        if (!cancelled) {
+          setReport(data);
         }
       })
       .catch((error) => {
-        if (!cancelled) {
+        if (!cancelled && !cached) {
           setReport(null);
           showError(error instanceof Error ? error.message : 'Could not load ads report');
         }
@@ -193,6 +203,20 @@ export default function DashboardPage() {
           setLoading(false);
         }
       });
+
+    if (agency) {
+      listTenants()
+        .then((data) => {
+          if (!cancelled) {
+            setTenants(data.tenants);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setTenants([]);
+          }
+        });
+    }
 
     return () => {
       cancelled = true;
@@ -230,7 +254,7 @@ export default function DashboardPage() {
     : `${formatPrettyDate(startDate)} – ${formatPrettyDate(endDate)}`;
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         eyebrow="Insights"
         title="Ad dashboard"
@@ -314,8 +338,8 @@ export default function DashboardPage() {
         </div>
       </Surface>
 
-      {loading ? (
-        <ScreenLoader message="Fetching ads report..." />
+      {loading && !report ? (
+        <PagePending />
       ) : !report || ads.length === 0 ? (
         <EmptyState
           icon={<LayoutDashboard className="size-6" />}
@@ -416,6 +440,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </>
   );
 }

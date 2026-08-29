@@ -18,7 +18,7 @@ import { clearAuthError } from '@/lib/store/features/authSlice';
 import { resetPasswordSchema, type ResetPasswordFormValues } from '@/lib/auth/schemas';
 import { toastFormErrors } from '@/lib/auth/toastFormErrors';
 import { showError, showSuccess } from '@/lib/utils/toast';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { PagePending } from '@/components/common/page-pending';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -85,8 +85,6 @@ function ResetPasswordForm() {
   );
 
   return (
-    <>
-    {loading ? <ScreenLoader message="Updating password..." /> : null}
     <AuthCard
       icon={<ShieldCheck className="size-5" />}
       title="Reset password"
@@ -136,13 +134,12 @@ function ResetPasswordForm() {
         </Link>
       </p>
     </AuthCard>
-    </>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<ScreenLoader message="Loading..." />}>
+    <Suspense fallback={<PagePending />}>
       <ResetPasswordForm />
     </Suspense>
   );

@@ -127,6 +127,7 @@ const authSlice = createSlice({
       .addCase(signinUser.pending, pending)
       .addCase(signinUser.fulfilled, (state, action) => {
         state.loading = false;
+        state.hydrated = true;
         state.isAuthenticated = true;
         state.token = action.payload.token;
         state.user = action.payload.user;
@@ -155,6 +156,7 @@ const authSlice = createSlice({
       .addCase(verifyOtpUser.pending, pending)
       .addCase(verifyOtpUser.fulfilled, (state, action) => {
         state.loading = false;
+        state.hydrated = true;
         state.isAuthenticated = true;
         state.token = action.payload.token;
         state.user = action.payload.user;
@@ -165,6 +167,7 @@ const authSlice = createSlice({
       .addCase(resetPasswordUser.pending, pending)
       .addCase(resetPasswordUser.fulfilled, (state, action) => {
         state.loading = false;
+        state.hydrated = true;
         state.isAuthenticated = true;
         state.token = action.payload.token;
         state.user = action.payload.user;

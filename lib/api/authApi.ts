@@ -46,7 +46,7 @@ export function signupApi(body: {
   password: string;
   confirmPassword: string;
 }) {
-  return apiPost<SignupResponse>('/api/auth/register', body);
+  return apiPost<SignupResponse>('/api/auth/signup', body);
 }
 
 export function signinApi(body: IdentifierPayload & { password: string }) {

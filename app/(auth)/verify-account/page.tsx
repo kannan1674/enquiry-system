@@ -11,7 +11,7 @@ import { AuthCard } from '../components/auth-card';
 import { AuthOutlinedInput } from '../components/auth-outlined-input';
 import { AuthOtpField } from '../components/auth-otp-field';
 import { AuthResendButton } from '../components/auth-resend-button';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { PagePending } from '@/components/common/page-pending';
 import { useAppDispatch, useAppSelector } from '@/lib/store/hooks';
 import { resendOtpUser, verifyOtpUser } from '@/lib/api/authActions';
 import { clearAuthError } from '@/lib/store/features/authSlice';
@@ -38,10 +38,11 @@ function VerifyAccountForm() {
 
   useEffect(() => {
     dispatch(clearAuthError());
+    router.prefetch('/');
     if (emailFromQuery) {
       form.setValue('email', emailFromQuery);
     }
-  }, [dispatch, emailFromQuery, form]);
+  }, [dispatch, emailFromQuery, form, router]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -85,8 +86,6 @@ function VerifyAccountForm() {
   );
 
   return (
-    <>
-      {loading ? <ScreenLoader message="Verifying account..." /> : null}
       <AuthCard
         icon={<ShieldCheck className="size-5" />}
         title="Verify your account"
@@ -121,13 +120,12 @@ function VerifyAccountForm() {
           </Link>
         </p>
       </AuthCard>
-    </>
   );
 }
 
 export default function VerifyAccountPage() {
   return (
-    <Suspense fallback={<ScreenLoader message="Loading..." />}>
+    <Suspense fallback={<PagePending />}>
       <VerifyAccountForm />
     </Suspense>
   );

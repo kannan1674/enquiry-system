@@ -7,6 +7,10 @@ const nextConfig = {
   // Performance optimizations for Windows
   experimental: {
     memoryBasedWorkersCount: true,
+    staleTimes: {
+      dynamic: 60,
+      static: 180,
+    },
     optimizePackageImports: [
       'lucide-react',
       'recharts',

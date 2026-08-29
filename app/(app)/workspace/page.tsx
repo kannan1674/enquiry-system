@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
-import { AppShell, EmptyState, PageHeader } from '@/components/app-shell';
-import { ScreenLoader } from '@/components/common/screen-loader';
+import { EmptyState, PageHeader } from '@/components/app-shell';
+import { PagePending } from '@/components/common/page-pending';
 import { FacebookBusinessLogin } from '@/components/agency/facebook-business-login';
 import { ChannelAssetRow } from '@/components/agency/channel-asset-row';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,7 @@ export default function WorkspacePage() {
 
   if (!isDirectOwner(user?.role)) {
     return (
-      <AppShell>
+      <>
         <EmptyState
           title="Agency workspace"
           text="Agencies manage clients from the Clients page. Direct business owners use this screen."
@@ -70,12 +70,12 @@ export default function WorkspacePage() {
             </Button>
           }
         />
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         eyebrow="Your business"
         title={tenant?.companyName || 'My workspace'}
@@ -94,7 +94,7 @@ export default function WorkspacePage() {
       />
 
       {loading ? (
-        <ScreenLoader message="Loading workspace..." />
+        <PagePending />
       ) : (
         <div className="space-y-4">
           {!metaAppId ? (
@@ -114,6 +114,6 @@ export default function WorkspacePage() {
           ))}
         </div>
       )}
-    </AppShell>
+    </>
   );
 }
