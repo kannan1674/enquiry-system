@@ -14,7 +14,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative h-dvh w-full overflow-hidden">
       <Image
-        src="/media/auth/bg.jpg"
+        src="/media/auth/bg1.png"
         alt=""
         fill
         priority
