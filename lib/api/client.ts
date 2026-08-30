@@ -1,4 +1,5 @@
-import { getToken } from '@/lib/utils/tokenStorage';
+import { signOutExpiredSession } from '@/lib/auth/session';
+import { getToken, isJwtExpired } from '@/lib/utils/tokenStorage';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://enquiry-api.vercel.app')
   .replace(/^['"]|['"]$/g, '')
@@ -37,9 +38,11 @@ export async function apiRequest<T>(
 
   if (auth) {
     const token = getToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (!token || isJwtExpired(token)) {
+      signOutExpiredSession();
+      throw new Error('Your session has expired. Please sign in again.');
     }
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -50,6 +53,11 @@ export async function apiRequest<T>(
     body: body != null && method !== 'GET' ? JSON.stringify(body) : undefined,
   });
 
+  if (auth && response.status === 401) {
+    signOutExpiredSession();
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+
   const data = (await response.json()) as { success?: boolean; message?: string } & T;
 
   if (!response.ok || data.success === false) {
@@ -58,4 +66,3 @@ export async function apiRequest<T>(
 
   return data;
 }
-

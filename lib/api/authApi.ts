@@ -22,6 +22,14 @@ export type AuthResponse = {
   success: boolean;
   message: string;
   token: string;
+  accessToken?: string;
+  refreshToken?: string;
+  refresh_token?: string;
+  referenceToken?: string;
+  expiresIn?: number;
+  expires_in?: number;
+  expiresInMinutes?: number;
+  tokenType?: string;
   user: AuthUser;
 };
 
@@ -77,4 +85,14 @@ export function resetPasswordApi(
   },
 ) {
   return apiPost<AuthResponse>('/api/auth/reset-password', body);
+}
+
+export function refreshTokenApi(refreshToken: string) {
+  return apiPost<AuthResponse>('/api/auth/refresh', { refreshToken });
+}
+
+export function logoutApi(refreshToken?: string | null) {
+  return apiPost<{ success: boolean; message: string }>('/api/auth/logout', {
+    refreshToken: refreshToken || '',
+  });
 }

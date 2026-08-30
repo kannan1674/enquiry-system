@@ -17,30 +17,15 @@ import {
 } from '@/lib/api/agencyApi';
 import { useAppSelector } from '@/lib/store/hooks';
 import { isAgencyAdmin } from '@/lib/auth/roles';
-import { getToken } from '@/lib/utils/tokenStorage';
+import { apiRequest } from '@/lib/api/client';
 import { showError, showSuccess } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
 
-const ENQUIRY_API = (process.env.NEXT_PUBLIC_API_URL || 'https://enquiry-api.vercel.app')
-  .replace(/^['"]|['"]$/g, '')
-  .replace(/\/$/, '');
-
 async function enquiryApi<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  const response = await fetch(`${ENQUIRY_API}/api${path}`, {
-    cache: 'no-store',
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
+  return apiRequest<T>(path, {
+    method: (init.method as 'GET' | 'POST' | 'PATCH') || 'GET',
+    body: init.body ? JSON.parse(String(init.body)) : undefined,
   });
-  const data = (await response.json()) as { success?: boolean; message?: string } & T;
-  if (!response.ok || data.success === false) {
-    throw new Error(data.message || 'Request failed');
-  }
-  return data;
 }
 
 function sameEnquiryList(current: Enquiry[], next: Enquiry[]) {

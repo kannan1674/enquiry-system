@@ -2,6 +2,7 @@
 
 const TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
+const TOKEN_ISSUED_KEY = 'authTokenIssuedAt';
 const SESSION_ID_KEY = 'sessionId';
 const TOKEN_EXPIRY_KEY = 'tokenExpiry';
 const ACCOUNT_TYPE_ID_KEY = 'AccountTypeId';
@@ -16,12 +17,61 @@ export const getToken = (): string | null => {
 };
 
 /**
+ * Read `exp` from a JWT without verifying the signature.
+ */
+export function getJwtExpiryMs(token: string): number | null {
+  const part = token.split('.')[1];
+  if (!part) {
+    return null;
+  }
+  try {
+    const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const payload = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof payload.exp !== 'number') {
+      return null;
+    }
+    // JWT exp is seconds. Some APIs send milliseconds instead.
+    return payload.exp > 1e12 ? payload.exp : payload.exp * 1000;
+  } catch {
+    return null;
+  }
+}
+
+export function getAccessExpiryMs(token = getToken()): number | null {
+  const jwtExp = token ? getJwtExpiryMs(token) : null;
+  const stored = getTokenExpiry();
+  if (jwtExp != null && stored != null) {
+    return Math.min(jwtExp, stored);
+  }
+  return jwtExp ?? stored;
+}
+
+export function isJwtExpired(token: string): boolean {
+  const expiry = getAccessExpiryMs(token);
+  return expiry != null && Date.now() >= expiry;
+}
+
+/**
  * Set token in localStorage
  */
 export const setToken = (token: string): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(TOKEN_ISSUED_KEY, String(Date.now()));
+  const expiry = getJwtExpiryMs(token);
+  if (expiry) {
+    setTokenExpiry(expiry);
+  }
 };
+
+export function getTokenIssuedAt(): number | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(TOKEN_ISSUED_KEY);
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
 
 /**
  * Remove token from localStorage
@@ -29,6 +79,7 @@ export const setToken = (token: string): void => {
 export const removeToken = (): void => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_ISSUED_KEY);
 };
 
 /**
@@ -156,9 +207,15 @@ export const removeCsrfToken = (): void => {
  * Check if token is expired
  */
 export const isTokenExpired = (): boolean => {
-  const expiry = getTokenExpiry();
-  if (!expiry) return true;
-  return Date.now() > expiry;
+  const token = getToken();
+  if (!token) {
+    return true;
+  }
+  const stored = getTokenExpiry();
+  if (stored) {
+    return Date.now() >= stored;
+  }
+  return isJwtExpired(token);
 };
 
 /**

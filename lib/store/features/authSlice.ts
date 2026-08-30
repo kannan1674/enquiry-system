@@ -9,7 +9,18 @@ import {
   signupUser,
   verifyOtpUser,
 } from '@/lib/api/authActions';
-import { clearAuthData, getToken, setToken } from '@/lib/utils/tokenStorage';
+import { logoutApi } from '@/lib/api/authApi';
+import { startRefreshWatch } from '@/lib/auth/refresh';
+import { extractSessionTokens } from '@/lib/auth/sessionTokens';
+import {
+  clearAuthData,
+  getRefreshToken,
+  getToken,
+  isJwtExpired,
+  setRefreshToken,
+  setToken,
+  setTokenExpiry,
+} from '@/lib/utils/tokenStorage';
 import { clearAllCached } from '@/lib/api/cache';
 
 const USER_KEY = 'authUser';
@@ -41,12 +52,24 @@ const initialState: AuthState = {
   pendingMobile: null,
 };
 
-function persistSession(token: string, user: AuthUser) {
+function accessTokenOf(payload: unknown) {
+  return extractSessionTokens(payload).accessToken;
+}
+
+function persistSession(token: string, user: AuthUser, payload?: unknown) {
+  const extras = extractSessionTokens(payload);
   clearAllCached();
   setToken(token);
+  if (extras.refreshToken) {
+    setRefreshToken(extras.refreshToken);
+  }
+  if (extras.expiresIn) {
+    setTokenExpiry(Date.now() + extras.expiresIn * 1000);
+  }
   if (typeof window !== 'undefined') {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
+  startRefreshWatch();
 }
 
 function otpMeta(email?: string, mobile?: string) {
@@ -63,6 +86,10 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout(state) {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        void logoutApi(refreshToken).catch(() => undefined);
+      }
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -79,17 +106,29 @@ const authSlice = createSlice({
     clearAuthError(state) {
       state.error = null;
     },
-    setAuthSession(state, action: { payload: { token: string; user: AuthUser } }) {
+    setAuthSession(state, action: { payload: { token: string; user: AuthUser; refreshToken?: string; expiresIn?: number } }) {
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.user = action.payload.user;
       state.otpSent = false;
-      persistSession(action.payload.token, action.payload.user);
+      persistSession(action.payload.token, action.payload.user, action.payload);
+    },
+    updateAccessToken(state, action: { payload: string }) {
+      state.token = action.payload;
+      state.isAuthenticated = true;
     },
     rehydrateAuth(state) {
       const token = getToken();
+      const refreshToken = getRefreshToken();
       const raw = typeof window !== 'undefined' ? localStorage.getItem(USER_KEY) : null;
-      if (token && raw) {
+      if (!token || isJwtExpired(token)) {
+        if (token || refreshToken) {
+          clearAuthData();
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(USER_KEY);
+          }
+        }
+      } else if (token && raw) {
         try {
           state.token = token;
           state.user = JSON.parse(raw) as AuthUser;
@@ -129,13 +168,14 @@ const authSlice = createSlice({
       .addCase(signupUser.rejected, rejected)
       .addCase(signinUser.pending, pending)
       .addCase(signinUser.fulfilled, (state, action) => {
+        const token = accessTokenOf(action.payload);
         state.loading = false;
         state.hydrated = true;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
+        state.token = token;
         state.user = action.payload.user;
         state.otpSent = false;
-        persistSession(action.payload.token, action.payload.user);
+        persistSession(token, action.payload.user, action.payload);
       })
       .addCase(signinUser.rejected, rejected)
       .addCase(resendOtpUser.pending, pending)
@@ -158,28 +198,30 @@ const authSlice = createSlice({
       .addCase(forgotPasswordResendUser.rejected, rejected)
       .addCase(verifyOtpUser.pending, pending)
       .addCase(verifyOtpUser.fulfilled, (state, action) => {
+        const token = accessTokenOf(action.payload);
         state.loading = false;
         state.hydrated = true;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
+        state.token = token;
         state.user = action.payload.user;
         state.otpSent = false;
-        persistSession(action.payload.token, action.payload.user);
+        persistSession(token, action.payload.user, action.payload);
       })
       .addCase(verifyOtpUser.rejected, rejected)
       .addCase(resetPasswordUser.pending, pending)
       .addCase(resetPasswordUser.fulfilled, (state, action) => {
+        const token = accessTokenOf(action.payload);
         state.loading = false;
         state.hydrated = true;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
+        state.token = token;
         state.user = action.payload.user;
         state.otpSent = false;
-        persistSession(action.payload.token, action.payload.user);
+        persistSession(token, action.payload.user, action.payload);
       })
       .addCase(resetPasswordUser.rejected, rejected);
   },
 });
 
-export const { logout, clearAuthError, rehydrateAuth, setAuthSession } = authSlice.actions;
+export const { logout, clearAuthError, rehydrateAuth, setAuthSession, updateAccessToken } = authSlice.actions;
 export default authSlice.reducer;
